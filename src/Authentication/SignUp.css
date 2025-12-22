@@ -1,0 +1,93 @@
+/* Main container */
+.SignUp_Container {
+  min-height: 100vh;
+  background: #ffffff; /* white */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #000000; /* black */
+  padding: 20px;
+}
+
+/* Title */
+.SignUp_Container h1 {
+  color: #0b8a30;  /* green */
+  font-size: 2rem;
+  margin-bottom: 25px;
+}
+
+/* Form box */
+.form_container2 {
+  background: #f6f6f6;
+  padding: 30px;
+  width: 350px;
+  border-radius: 10px;
+  border: 2px solid #0b8a30; /* green border */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.15);
+}
+
+/* Input fields */
+.form_container2 input {
+  width: 90%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #0b8a30;
+  border-radius: 6px;
+  outline: none;
+  background: #ffffff;
+  color: #000;
+  font-size: 15px;
+}
+
+.form_container2 input:focus {
+  border-color: #066a24;
+  box-shadow: 0 0 5px rgba(11, 138, 48, 0.4);
+}
+
+/* Error message */
+.error_msg {
+  width: 90%;
+  background: #ffdddd;
+  color: #b30000;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+  margin-top: 10px;
+  border-left: 4px solid #b30000;
+}
+
+/* Success message */
+.success_msg {
+  width: 90%;
+  background: #ddffdd;
+  color: #0b8a30;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+  margin-top: 10px;
+  border-left: 4px solid #0b8a30;
+}
+
+/* Submit button */
+.submit_button {
+  width: 95%;
+  padding: 12px;
+  margin-top: 15px;
+  background: #0b8a30; /* green */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.submit_button:hover {
+  background: #066a24; /* darker green */
+}

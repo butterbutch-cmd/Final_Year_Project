@@ -1,0 +1,38 @@
+.cover-banner {
+  /* Break out of page-container */
+  width: 100vw;
+  max-width: 100vw;
+
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+
+  /* Existing styles */
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.cover-content {
+  position: relative;
+  text-align: center;
+  z-index: 2;
+  padding: 1rem;
+}
+
+.cover-content h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.cover-content p {
+  font-size: 1.2rem;
+}

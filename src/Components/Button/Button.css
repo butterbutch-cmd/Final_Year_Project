@@ -1,0 +1,23 @@
+:root {
+  --green: #27ae60;
+  --green-dark: #219150;
+}
+
+/* PRIMARY BUTTON */
+.btn-primary {
+  background: var(--green);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-primary:hover {
+  background: var(--green-dark);
+  transform: scale(1.05);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}

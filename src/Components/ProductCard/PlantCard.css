@@ -1,0 +1,162 @@
+/* =========================
+   CARD RESET (IMPORTANT)
+========================= */
+
+/* If card or parent is an <a> */
+a.plant-card,
+.plant-card,
+.plant-card * {
+  text-decoration: none !important;
+  color: inherit;
+}
+
+/* Remove underline from SVG icons (stars) */
+.plant-card svg,
+.plant-card svg * {
+  text-decoration: none !important;
+}
+
+/* =========================
+   CARD
+========================= */
+
+.plant-card {
+  width: 260px;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.plant-card:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* =========================
+   IMAGE
+========================= */
+
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  background: #d6d1c4;
+  border-radius: 4px;
+}
+
+.image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.05);
+  transition: transform 0.4s ease;
+}
+
+.plant-card:hover .image-wrapper img {
+  transform: scale(1.13);
+}
+
+/* =========================
+   SALE BADGE
+========================= */
+
+.sale-badge {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  background: #ff4d4f;
+  color: #fff;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 0 4px 4px 0;
+  z-index: 2;
+}
+
+/* =========================
+   INFO
+========================= */
+
+.plant-info {
+  padding-top: 8px;
+}
+
+/* =========================
+   PLANT NAME
+========================= */
+
+.plant-name {
+  margin: 0 0 2px 0;
+  font-size: 18px;
+  font-weight: 500;
+  font-family: "Freight Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #222;
+  transition: color 0.25s ease;
+}
+
+.plant-card:hover .plant-name {
+  color: #1faa59;
+}
+
+/* =========================
+   SUBTITLE
+========================= */
+
+.subtitle {
+  font-size: 13px;
+  font-style: italic;
+  font-family: "Open Sans", sans-serif;
+  color: #777;
+  margin: 0 0 4px 0;
+}
+
+/* =========================
+   RATING
+========================= */
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.star {
+  stroke: #ccc;
+  fill: none;
+}
+
+.star.filled {
+  fill: #1faa59;
+  stroke: #1faa59;
+}
+
+.rating span {
+  font-size: 13px;
+  color: #555;
+  margin-left: 6px;
+}
+
+/* =========================
+   PRICE
+========================= */
+
+.price {
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.price .current {
+  color: #000;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+/* KEEP STRIKE-THROUGH ONLY HERE */
+.price .old {
+  color: #999;
+  text-decoration: line-through !important;
+}
