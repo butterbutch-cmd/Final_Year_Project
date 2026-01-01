@@ -3,7 +3,8 @@ import HomePage from "./Pages/HomePage";
 import LoginPage from "./Authentication/LoginPage";
 import SignUp from "./Authentication/SignUp";
 import TestMail from "./Authentication/ForgotPassword";
-import AdminPanel from "./Pages/AdminPanel";
+// import AdminPanel from "./Pages/DraftAdminPanel";
+import AdminPanel from "./admin/AdminPanel";
 import { AuthProvider } from "./context/AuthContext";
 import "./App.css";
 

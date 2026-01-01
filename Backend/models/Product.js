@@ -5,61 +5,63 @@ const productSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
 
     subtitle: {
       type: String,
-      trim: true
+      trim: true,
     },
 
     description: {
-      type: String
+      type: String,
     },
 
     image: {
-      type: String, // image URL (Cloudinary / S3 / local)
-      required: true
+      type: String,
+      required: true,
     },
 
     price: {
       type: Number,
-      required: true
+      required: true,
     },
 
     oldPrice: {
-      type: Number
+      type: Number,
     },
+
+    stock: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
 
     onSale: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     trending: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     topPick: {
       type: Boolean,
-      default: false
+      default: false,
     },
-
-    rating: {
-      type: Number,
-      default: 5,
-      min: 0,
-      max: 5
-    },
-
-    reviews: {
-      type: Number,
-      default: 0
-    }
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 

@@ -9,7 +9,7 @@ const ProductSection = ({ title, filterKey }) => {
   useEffect(() => {
     getProducts().then((data) => {
       if (filterKey) {
-        setProducts(data.filter(p => p[filterKey]));
+        setProducts(data.filter((p) => p[filterKey]));
       } else {
         setProducts(data);
       }
@@ -17,11 +17,11 @@ const ProductSection = ({ title, filterKey }) => {
   }, [filterKey]);
 
   return (
-    <section>
-      <h2>{title}</h2>
+    <section className="my-8">
+      <h2 className="text-3xl font-bold mb-6">{title}</h2>
 
-      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-        {products.map(product => (
+      <div className="flex gap-8 flex-wrap">
+        {products.map((product) => (
           <Link key={product._id} to={`/product/${product._id}`}>
             <PlantCard {...product} />
           </Link>
