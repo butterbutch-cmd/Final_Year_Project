@@ -17,11 +17,22 @@ const ProductSection = ({ title, filterKey }) => {
   }, [filterKey]);
 
   return (
-    <section className="my-8">
+    <section className="my-8 px-[55px]">
       <h2 className="text-3xl font-bold mb-6">{title}</h2>
 
-      <div className="flex gap-8 flex-wrap">
-        {products.map((product) => (
+      {/* ONLY SHOW FIRST 4 PRODUCTS */}
+      <div
+        className="
+          grid
+          grid-cols-1
+          sm:grid-cols-2
+          md:grid-cols-2
+          lg:grid-cols-2
+          xl:grid-cols-4
+          gap-10
+        "
+      >
+        {products.slice(0, 4).map((product) => (
           <Link key={product._id} to={`/product/${product._id}`}>
             <PlantCard {...product} />
           </Link>

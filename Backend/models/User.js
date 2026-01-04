@@ -5,34 +5,28 @@ const Joi = require("joi");
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-
-  // 🔑 Password only for LOCAL users
   password: { 
     type: String,
     required: function () {
       return this.authProvider === "local";
     }
   },
-
-  // 🔐 Auth Provider
   authProvider: {
     type: String,
     enum: ["local", "google"],
     required: true,
     default: "local"
   },
-
-  // 🔥 Firebase UID (only for Google users)
-  firebaseUid: {
-    type: String
-  },
-
+  firebaseUid: String,
   profilePic: String,
-
-  // 🔐 Forgot Password (OTP) — LOCAL ONLY
   resetOtp: String,
-  resetOtpExpire: Date
-});
+  resetOtpExpire: Date,
+
+  /* NEW FIELDS */
+  isBlocked: { type: Boolean, default: false },  // to track blocked users
+  role: { type: String, enum: ["user", "admin"], default: "user" }, // optional
+}, { timestamps: true }); // timestamps gives createdAt + updatedAt
+
 
 
 userSchema.methods.generateAuthToken = function () {

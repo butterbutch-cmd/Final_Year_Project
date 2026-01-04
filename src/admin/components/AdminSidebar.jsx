@@ -1,68 +1,85 @@
-const AdminSidebar = ({ setActivePage }) => {
-  const sidebarStyle = {
-    width: "250px",
-    backgroundColor: "#f9fafb",          // soft grey
-    padding: "20px 0",
-    height: "100vh",
-    position: "sticky",                  // sticky sidebar
-    top: 0,
-    borderRight: "1px solid #e5e7eb",
-    boxShadow: "1px 0 4px rgba(0, 0, 0, 0.05)",
-    alignSelf: "flex-start",
-  };
+import { Home, Boxes, Users } from "lucide-react";
 
-  const ulStyle = {
-    listStyle: "none",
-    margin: 0,
-    padding: 0,
-  };
+const AdminSidebar = ({ activePage, setActivePage }) => {
+  const menuItems = [
+    {
+      key: "home",
+      label: "Home",
+      icon: Home,
+    },
+    {
+      key: "inventory",
+      label: "Product Management",
+      icon: Boxes,
+    },
+    {
+      key: "users",
+      label: "User Management",
+      icon: Users,
+    },
+  ];
 
-  const liStyle = {
-    padding: "14px 24px",
-    color: "#374151",
-    cursor: "pointer",
-    fontSize: "15px",
-    fontWeight: "500",
-    borderLeft: "4px solid transparent",
-    margin: "6px 0",
-    borderRadius: "6px",
-    transition: "all 0.25s ease",
-  };
+  const baseClasses = `
+    flex items-center gap-3
+    px-6 py-[14px]
+    mx-0 my-1.5
+    text-[15px]
+    font-medium
+    cursor-pointer
+    rounded-md
+    border-l-4
+    transition-all duration-200 ease-in-out
+  `;
 
-  const handleMouseEnter = (e) => {
-    e.currentTarget.style.backgroundColor = "#e5e7eb";
-    e.currentTarget.style.borderLeftColor = "#2563eb";
-    e.currentTarget.style.color = "#2563eb";
-    e.currentTarget.style.paddingLeft = "28px";
-  };
+  const activeClasses = `
+    bg-gray-200
+    border-green-600
+    text-green-600
+    pl-7
+  `;
 
-  const handleMouseLeave = (e) => {
-    e.currentTarget.style.backgroundColor = "transparent";
-    e.currentTarget.style.borderLeftColor = "transparent";
-    e.currentTarget.style.color = "#374151";
-    e.currentTarget.style.paddingLeft = "24px";
-  };
+  const inactiveClasses = `
+    text-gray-700
+    border-transparent
+    hover:bg-gray-200
+    hover:border-green-600
+    hover:text-green-600
+    hover:pl-7
+  `;
 
   return (
-    <aside style={sidebarStyle}>
-      <ul style={ulStyle}>
-        <li
-          style={liStyle}
-          onClick={() => setActivePage("home")}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          Home
-        </li>
+    <aside
+      className="
+        w-[240px]
+        bg-gray-50
+        py-5
+        h-screen
+        sticky
+        top-0
+        border-r
+        border-gray-200
+        shadow-[1px_0_4px_rgba(0,0,0,0.05)]
+        shrink-0
+      "
+    >
+      <ul className="list-none m-0 p-0">
+        {menuItems.map(({ key, label, icon: Icon }) => {
+          const isActive = activePage === key;
 
-        <li
-          style={liStyle}
-          onClick={() => setActivePage("inventory")}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          Product Management
-        </li>
+          return (
+            <li
+              key={key}
+              onClick={() => setActivePage(key)}
+              className={`
+                ${baseClasses}
+                ${isActive ? activeClasses : inactiveClasses}
+              `}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </li>
+          );
+        })}
       </ul>
     </aside>
   );

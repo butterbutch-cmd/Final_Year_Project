@@ -3,25 +3,32 @@ const express = require('express');
 const cors = require('cors');
 const connection = require('./db');
 
-const userRoutes = require('./routes/Users');
-const authRoutes = require('./routes/auth');
-const passwordRecov = require('./routes/mail');
-const productRoutes = require('./routes/productRoutes'); // ✅ THIS
+// ---------------- ROUTES ----------------
+const userRoutes = require('./routes/Users');        // ✅ User CRUD & block/unblock
+const authRoutes = require('./routes/auth');         // ✅ Login/Register
+const passwordRecov = require('./routes/mail');      // ✅ Forgot password / OTP
+const productRoutes = require('./routes/productRoutes'); // ✅ Product CRUD
 
 const app = express();
 
-connection();
+// ---------------- DATABASE ----------------
+connection(); // Connect to MongoDB
 
-app.use(express.json());
-app.use(cors());
+// ---------------- MIDDLEWARE ----------------
+app.use(express.json()); // Parse JSON bodies
+app.use(cors());        // Enable CORS
 
-app.use("/api/Users", userRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/mail", passwordRecov);
-app.use("/api/products", productRoutes); // ✅ THIS
+// ---------------- ROUTES ----------------
+app.use("/api/users", userRoutes);       // Users routes
+app.use("/api/auth", authRoutes);        // Auth routes
+app.use("/api/mail", passwordRecov);    // Password recovery routes
+app.use("/api/products", productRoutes); // Product routes
 
+// ---------------- DEFAULT ROUTE ----------------
 app.get("/", (req, res) => {
-  res.send("hello from backend");
+  res.send("Hello from backend");
 });
 
-app.listen(5000, () => console.log("Connected to the 5000 port"));
+// ---------------- SERVER ----------------
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

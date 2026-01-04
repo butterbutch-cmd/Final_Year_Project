@@ -13,10 +13,16 @@ a:focus {
   outline: none;
 }
 
-.page-container{
+/* .page-container{
     padding-left: 20px;
     padding-right: 20px;
     max-width: 1400px;
     margin: 0 auto;
     background-color: #ffffff;
-}
+} */
+
+/* .page-container:has(.full-width) {
+  padding-left: 0;
+  padding-right: 0;
+  max-width: 100%;
+} */

@@ -1,13 +1,18 @@
 import AdminHeader from "./components/AdminHeader";
 import AdminSidebar from "./components/AdminSidebar";
 
-const AdminLayout = ({ children, setActivePage }) => {
+const AdminLayout = ({ children, setActivePage, activePage }) => {
   return (
     <div>
       <AdminHeader />
       <div style={{ display: "flex" }}>
-        <AdminSidebar setActivePage={setActivePage} />
-        <main>{children}</main>
+        <AdminSidebar 
+          activePage={activePage}
+          setActivePage={setActivePage} 
+        />
+        <main style={{ flex: 1, minWidth: 0 }}>
+          {children}
+        </main>
       </div>
     </div>
   );

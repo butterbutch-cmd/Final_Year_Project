@@ -5,9 +5,23 @@ import {
   deleteProduct,
   updateProduct,
 } from "../../services/productAPI";
-import "./Inventory.css";
+
+import StatCard from "../components/StatCard";
+import DataTable from "../components/DataTable";
+
+import {
+  Package,
+  AlertTriangle,
+  XCircle,
+  Edit2,
+  Trash2,
+} from "lucide-react";
 
 const Inventory = () => {
+  const [products, setProducts] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     subtitle: "",
@@ -21,27 +35,20 @@ const Inventory = () => {
     topPick: false,
   });
 
-  const [products, setProducts] = useState([]);
-  const [filter, setFilter] = useState("all");
-  const [editingId, setEditingId] = useState(null);
-
-  /* ---------- FETCH PRODUCTS ---------- */
+  /* ---------- FETCH ---------- */
   const fetchProducts = async () => {
     const data = await getProducts();
-    setProducts(data);
+    setProducts(Array.isArray(data) ? data : []);
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  /* ---------- FORM HANDLERS ---------- */
+  /* ---------- FORM ---------- */
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
   };
 
   const resetForm = () => {
@@ -60,6 +67,7 @@ const Inventory = () => {
     setEditingId(null);
   };
 
+  /* ---------- SAVE ---------- */
   const handleSubmit = async () => {
     const payload = {
       ...form,
@@ -68,23 +76,20 @@ const Inventory = () => {
       stock: Number(form.stock),
       tags: form.tags
         .split(",")
-        .map((tag) => tag.trim())
+        .map((t) => t.trim())
         .filter(Boolean),
     };
 
-    if (editingId) {
-      await updateProduct(editingId, payload);
-      alert("Product updated");
-    } else {
-      await createProduct(payload);
-      alert("Product added");
-    }
+    editingId
+      ? await updateProduct(editingId, payload)
+      : await createProduct(payload);
 
     resetForm();
     fetchProducts();
+    setShowModal(false);
   };
 
-  /* ---------- EDIT ---------- */
+  /* ---------- EDIT / DELETE ---------- */
   const handleEdit = (product) => {
     setEditingId(product._id);
     setForm({
@@ -99,88 +104,209 @@ const Inventory = () => {
       trending: product.trending,
       topPick: product.topPick,
     });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setShowModal(true);
   };
 
-  /* ---------- DELETE ---------- */
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product?")) return;
     await deleteProduct(id);
     fetchProducts();
   };
 
-  /* ---------- FILTER ---------- */
-  const filteredProducts = products.filter((p) => {
-    if (filter === "sale") return p.onSale;
-    if (filter === "trending") return p.trending;
-    if (filter === "topPick") return p.topPick;
-    return true;
-  });
+  /* ---------- STATS ---------- */
+  const statsData = [
+    {
+      title: "Total Products",
+      value: products.length,
+      subtitle: "Across all categories",
+      Icon: Package,
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+    },
+    {
+      title: "Low Stock",
+      value: products.filter((p) => p.stock < 10 && p.stock > 0).length,
+      subtitle: "Items below 10",
+      Icon: AlertTriangle,
+      iconBg: "bg-yellow-100",
+      iconColor: "text-yellow-600",
+    },
+    {
+      title: "Out of Stock",
+      value: products.filter((p) => p.stock === 0).length,
+      subtitle: "Needs restock",
+      Icon: XCircle,
+      iconBg: "bg-red-100",
+      iconColor: "text-red-600",
+    },
+  ];
 
   return (
-    <div className="inventory-container">
-      <h2>Inventory Management</h2>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      {/* ---------- DASHBOARD ---------- */}
+      <StatCard
+        pageTitle="Inventory Dashboard"
+        pageSubtitle="Manage product listings"
+        buttonText="Add Product"
+        onButtonClick={() => {
+          resetForm();
+          setShowModal(true);
+        }}
+        stats={statsData}
+      />
 
-      {/* ===== FORM ===== */}
-      <section className="product-form">
-        <h3>{editingId ? "Edit Product" : "Add Product"}</h3>
+      {/* ---------- PRODUCT TABLE ---------- */}
+      <DataTable
+        title="Product Listings"
+        subtitle="Search and filter inventory items"
+        columns={["Product", "Tags", "Price", "Stock", "Status"]}
 
-        <input name="name" placeholder="Product Name" value={form.name} onChange={handleChange} />
-        <input name="subtitle" placeholder="Subtitle" value={form.subtitle} onChange={handleChange} />
-        <input name="image" placeholder="Image URL" value={form.image} onChange={handleChange} />
-        <input type="number" name="price" placeholder="Price" value={form.price} onChange={handleChange} />
-        <input type="number" name="oldPrice" placeholder="Old Price" value={form.oldPrice} onChange={handleChange} />
-        <input type="number" name="stock" placeholder="Stock Quantity" value={form.stock} onChange={handleChange} />
-        <input name="tags" placeholder="Tags (Indoor, Easy care)" value={form.tags} onChange={handleChange} />
+        data={products}
 
-        <div className="checkbox-group">
-          <label><input type="checkbox" name="onSale" checked={form.onSale} onChange={handleChange} /> Sale</label>
-          <label><input type="checkbox" name="trending" checked={form.trending} onChange={handleChange} /> Trending</label>
-          <label><input type="checkbox" name="topPick" checked={form.topPick} onChange={handleChange} /> Top Pick</label>
-        </div>
+        /* 🔍 SEARCH */
+        searchableKeys={["name", "subtitle", "tags"]}
 
-        <button onClick={handleSubmit}>
-          {editingId ? "Update Product" : "Add Product"}
-        </button>
+        /* 🎯 FILTER */
+        filterKey="onSale"
+        filterOptions={[
+          { label: "On Sale", value: true },
+          { label: "Not On Sale", value: false },
+        ]}
 
-        {editingId && (
-          <button className="cancel-btn" onClick={resetForm}>
-            Cancel
-          </button>
+        renderRow={(product) => {
+          let statusLabel = "Active";
+          let statusStyle = "bg-green-100 text-green-700";
+
+          if (product.stock === 0) {
+            statusLabel = "Out of Stock";
+            statusStyle = "bg-red-100 text-red-700";
+          } else if (product.stock < 10) {
+            statusLabel = "Low Stock";
+            statusStyle = "bg-yellow-100 text-yellow-700";
+          }
+
+          return (
+            <>
+              {/* Product */}
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-10 h-10 rounded-lg object-cover"
+                  />
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    {product.subtitle && (
+                      <p className="text-xs text-gray-500">
+                        {product.subtitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </td>
+
+              {/* Tags */}
+              <td className="px-4 py-4 text-sm">
+                {product.tags?.join(", ") || "—"}
+              </td>
+
+              {/* Price */}
+              <td className="px-4 py-4 text-sm font-medium">
+                ${product.price}
+              </td>
+
+              {/* Stock */}
+              <td className="px-4 py-4 text-sm">
+                <span
+                  className={
+                    product.stock === 0
+                      ? "text-red-600"
+                      : product.stock < 10
+                      ? "text-yellow-600"
+                      : "text-green-600"
+                  }
+                >
+                  {product.stock}
+                </span>
+              </td>
+
+              {/* ✅ STATUS */}
+              <td className="px-4 py-4 text-sm">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle}`}
+                >
+                  {statusLabel}
+                </span>
+              </td>
+            </>
+          );
+        }}
+
+        actions={(product) => (
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => handleEdit(product)}
+              className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button
+              onClick={() => handleDelete(product._id)}
+              className="p-2 bg-gray-100 rounded-lg text-red-500 hover:bg-red-100"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         )}
-      </section>
+      />
 
-      {/* ===== FILTERS ===== */}
-      <section className="filter-buttons">
-        <button onClick={() => setFilter("all")}>All</button>
-        <button onClick={() => setFilter("sale")}>Sale</button>
-        <button onClick={() => setFilter("trending")}>Trending</button>
-        <button onClick={() => setFilter("topPick")}>Top Picks</button>
-      </section>
+      {/* ---------- MODAL ---------- */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+            <h3 className="text-xl font-semibold mb-4">
+              {editingId ? "Edit Product" : "Add Product"}
+            </h3>
 
-      {/* ===== LIST ===== */}
-      <section className="product-list">
-        {filteredProducts.map((product) => (
-          <div className="product-card" key={product._id}>
-            <img src={product.image} alt={product.name} />
-            <h4>{product.name}</h4>
-            <p>Rs. {product.price}</p>
-            <p>Stock: {product.stock}</p>
-
-            <div className="tags">
-              {product.tags?.map((tag, i) => (
-                <span key={i} className="tag custom">{tag}</span>
+            <div className="space-y-3">
+              {[
+                ["name", "Product Name"],
+                ["subtitle", "Subtitle"],
+                ["image", "Image URL"],
+                ["price", "Price"],
+                ["oldPrice", "Old Price"],
+                ["stock", "Stock"],
+                ["tags", "Tags (Indoor, Easy care)"],
+              ].map(([name, placeholder]) => (
+                <input
+                  key={name}
+                  name={name}
+                  value={form[name]}
+                  onChange={handleChange}
+                  placeholder={placeholder}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
               ))}
-            </div>
 
-            <div className="action-buttons">
-              <button className="edit-btn" onClick={() => handleEdit(product)}>Edit</button>
-              <button className="delete-btn" onClick={() => handleDelete(product._id)}>Delete</button>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 bg-emerald-500 text-white py-2 rounded-lg"
+                >
+                  {editingId ? "Update" : "Add"}
+                </button>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 bg-gray-100 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        ))}
-      </section>
+        </div>
+      )}
     </div>
   );
 };
