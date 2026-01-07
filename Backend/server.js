@@ -4,25 +4,29 @@ const cors = require('cors');
 const connection = require('./db');
 
 // ---------------- ROUTES ----------------
-const userRoutes = require('./routes/Users');        // ✅ User CRUD & block/unblock
-const authRoutes = require('./routes/auth');         // ✅ Login/Register
-const passwordRecov = require('./routes/mail');      // ✅ Forgot password / OTP
-const productRoutes = require('./routes/productRoutes'); // ✅ Product CRUD
+const userRoutes = require('./routes/Users');
+const authRoutes = require('./routes/auth');
+const passwordRecov = require('./routes/mail');
+const productRoutes = require('./routes/productRoutes');
+const adminAuthRoutes = require("./routes/adminAuth");
+const adminRoutes = require("./routes/adminRoutes"); // ✅ ADD THIS
 
 const app = express();
 
 // ---------------- DATABASE ----------------
-connection(); // Connect to MongoDB
+connection();
 
 // ---------------- MIDDLEWARE ----------------
-app.use(express.json()); // Parse JSON bodies
-app.use(cors());        // Enable CORS
+app.use(express.json());
+app.use(cors());
 
 // ---------------- ROUTES ----------------
-app.use("/api/users", userRoutes);       // Users routes
-app.use("/api/auth", authRoutes);        // Auth routes
-app.use("/api/mail", passwordRecov);    // Password recovery routes
-app.use("/api/products", productRoutes); // Product routes
+app.use("/api/users", userRoutes);
+app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admins", adminRoutes); // ✅ CREATE / FETCH / DELETE ADMINS
+app.use("/api/auth", authRoutes);
+app.use("/api/mail", passwordRecov);
+app.use("/api/products", productRoutes);
 
 // ---------------- DEFAULT ROUTE ----------------
 app.get("/", (req, res) => {

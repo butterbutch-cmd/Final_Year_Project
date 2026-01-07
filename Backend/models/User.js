@@ -2,61 +2,100 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const Joi = require("joi");
 
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { 
-    type: String,
-    required: function () {
-      return this.authProvider === "local";
-    }
+// -------------------- SCHEMA --------------------
+const userSchema = new mongoose.Schema(
+  {
+    username: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      trim: true 
+    },
+
+    email: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      lowercase: true, 
+      trim: true 
+    },
+
+    phoneNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+
+    password: { 
+      type: String, 
+      required: function () {
+        return this.authProvider === "local";
+      },
+    },
+
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      required: true,
+      default: "local",
+    },
+
+    firebaseUid: String,
+    profilePic: String,
+
+    resetOtp: String,
+    resetOtpExpire: Date,
+
+    isBlocked: { type: Boolean, default: false },
+
+    role: { 
+      type: String, 
+      enum: ["user", "admin", "super_admin", "moderator"], 
+      default: "user" 
+    },
+
+    // 🔥 optional invitation token for email-based login
+    invitationToken: String,
+    invitationExpires: Date,
   },
-  authProvider: {
-    type: String,
-    enum: ["local", "google"],
-    required: true,
-    default: "local"
-  },
-  firebaseUid: String,
-  profilePic: String,
-  resetOtp: String,
-  resetOtpExpire: Date,
+  { timestamps: true }
+);
 
-  /* NEW FIELDS */
-  isBlocked: { type: Boolean, default: false },  // to track blocked users
-  role: { type: String, enum: ["user", "admin"], default: "user" }, // optional
-}, { timestamps: true }); // timestamps gives createdAt + updatedAt
-
-
-
+// -------------------- JWT TOKEN --------------------
 userSchema.methods.generateAuthToken = function () {
   const token = jwt.sign(
-    { _id: this._id, username: this.username },
-    process.env.JWTPRIVATEKEY,
+    { 
+      _id: this._id, 
+      username: this.username,
+      role: this.role,
+    },
+    process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
+
   return token;
 };
 
-const User = mongoose.model("User", userSchema);
-
-// Signup validation
+// -------------------- VALIDATION --------------------
 const validate = (data) => {
   const schema = Joi.object({
     username: Joi.string().required().label("Username"),
     email: Joi.string().email().required().label("Email"),
-    password: Joi.string().required().label("Password")
+    phoneNumber: Joi.string().required().label("Phone Number"),
+    password: Joi.string().required().label("Password"),
   });
   return schema.validate(data);
 };
 
-// Login validation
 const validateLogin = (data) => {
   const schema = Joi.object({
     email: Joi.string().email().required().label("Email"),
-    password: Joi.string().required().label("Password")
+    password: Joi.string().required().label("Password"),
   });
   return schema.validate(data);
 };
+
+const User = mongoose.model("User", userSchema);
 
 module.exports = { User, validate, validateLogin };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createProduct,
   getProducts,
@@ -29,11 +29,13 @@ const Inventory = () => {
     oldPrice: "",
     image: "",
     stock: "",
-    tags: "",
+    tags: [],
     onSale: false,
     trending: false,
     topPick: false,
   });
+
+  const [newTag, setNewTag] = useState("");
 
   /* ---------- FETCH ---------- */
   const fetchProducts = async () => {
@@ -45,10 +47,39 @@ const Inventory = () => {
     fetchProducts();
   }, []);
 
+  /* ---------- ALL UNIQUE TAGS ---------- */
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    products.forEach((p) => {
+      p.tags?.forEach((t) => tagSet.add(t));
+    });
+    return Array.from(tagSet);
+  }, [products]);
+
   /* ---------- FORM ---------- */
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+  };
+
+  const toggleTag = (tag) => {
+    setForm((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tag)
+        ? prev.tags.filter((t) => t !== tag)
+        : [...prev.tags, tag],
+    }));
+  };
+
+  const addNewTag = () => {
+    if (!newTag.trim()) return;
+    if (!form.tags.includes(newTag.trim())) {
+      setForm((prev) => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()],
+      }));
+    }
+    setNewTag("");
   };
 
   const resetForm = () => {
@@ -59,12 +90,13 @@ const Inventory = () => {
       oldPrice: "",
       image: "",
       stock: "",
-      tags: "",
+      tags: [],
       onSale: false,
       trending: false,
       topPick: false,
     });
     setEditingId(null);
+    setNewTag("");
   };
 
   /* ---------- SAVE ---------- */
@@ -74,10 +106,6 @@ const Inventory = () => {
       price: Number(form.price),
       oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
       stock: Number(form.stock),
-      tags: form.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
     };
 
     editingId
@@ -99,7 +127,7 @@ const Inventory = () => {
       oldPrice: product.oldPrice || "",
       image: product.image,
       stock: product.stock,
-      tags: product.tags?.join(", ") || "",
+      tags: product.tags || [],
       onSale: product.onSale,
       trending: product.trending,
       topPick: product.topPick,
@@ -143,7 +171,6 @@ const Inventory = () => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      {/* ---------- DASHBOARD ---------- */}
       <StatCard
         pageTitle="Inventory Dashboard"
         pageSubtitle="Manage product listings"
@@ -155,24 +182,14 @@ const Inventory = () => {
         stats={statsData}
       />
 
-      {/* ---------- PRODUCT TABLE ---------- */}
       <DataTable
         title="Product Listings"
         subtitle="Search and filter inventory items"
         columns={["Product", "Tags", "Price", "Stock", "Status"]}
-
         data={products}
-
-        /* 🔍 SEARCH */
-        searchableKeys={["name", "subtitle", "tags"]}
-
-        /* 🎯 FILTER */
-        filterKey="onSale"
-        filterOptions={[
-          { label: "On Sale", value: true },
-          { label: "Not On Sale", value: false },
-        ]}
-
+        searchableKeys={["name", "subtitle"]}
+        filterKey="tags"
+        filterOptions={allTags.map((t) => ({ label: t, value: t }))}
         renderRow={(product) => {
           let statusLabel = "Active";
           let statusStyle = "bg-green-100 text-green-700";
@@ -187,7 +204,6 @@ const Inventory = () => {
 
           return (
             <>
-              {/* Product */}
               <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
                   <img
@@ -206,17 +222,14 @@ const Inventory = () => {
                 </div>
               </td>
 
-              {/* Tags */}
               <td className="px-4 py-4 text-sm">
                 {product.tags?.join(", ") || "—"}
               </td>
 
-              {/* Price */}
               <td className="px-4 py-4 text-sm font-medium">
-                ${product.price}
+                Rs {product.price}
               </td>
 
-              {/* Stock */}
               <td className="px-4 py-4 text-sm">
                 <span
                   className={
@@ -231,7 +244,6 @@ const Inventory = () => {
                 </span>
               </td>
 
-              {/* ✅ STATUS */}
               <td className="px-4 py-4 text-sm">
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle}`}
@@ -242,7 +254,6 @@ const Inventory = () => {
             </>
           );
         }}
-
         actions={(product) => (
           <div className="flex justify-center gap-2">
             <button
@@ -270,24 +281,70 @@ const Inventory = () => {
             </h3>
 
             <div className="space-y-3">
-              {[
-                ["name", "Product Name"],
-                ["subtitle", "Subtitle"],
-                ["image", "Image URL"],
-                ["price", "Price"],
-                ["oldPrice", "Old Price"],
-                ["stock", "Stock"],
-                ["tags", "Tags (Indoor, Easy care)"],
-              ].map(([name, placeholder]) => (
-                <input
-                  key={name}
-                  name={name}
-                  value={form[name]}
-                  onChange={handleChange}
-                  placeholder={placeholder}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              ))}
+              {["name", "subtitle", "image", "price", "oldPrice", "stock"].map(
+                (name) => (
+                  <input
+                    key={name}
+                    name={name}
+                    value={form[name]}
+                    onChange={handleChange}
+                    placeholder={name.toUpperCase()}
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                  />
+                )
+              )}
+
+              {/* TAG SELECT */}
+              <div>
+                <p className="text-sm font-medium mb-2">Tags</p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {allTags.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`px-3 py-1 rounded-full text-sm border ${
+                        form.tags.includes(tag)
+                          ? "bg-emerald-500 text-white border-emerald-500"
+                          : "bg-gray-100"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    placeholder="Add new tag"
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={addNewTag}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* SECTIONS */}
+              <div className="flex gap-4 pt-2">
+                {["onSale", "trending", "topPick"].map((key) => (
+                  <label key={key} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name={key}
+                      checked={form[key]}
+                      onChange={handleChange}
+                    />
+                    {key}
+                  </label>
+                ))}
+              </div>
 
               <div className="flex gap-3 pt-4">
                 <button

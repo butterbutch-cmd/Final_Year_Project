@@ -1,6 +1,9 @@
-import { Home, Boxes, Users } from "lucide-react";
+import { Home, Boxes, Users, LogOut, Shield, FileText } from "lucide-react"; // 🔥 added FileText
+import { useNavigate } from "react-router-dom";
 
 const AdminSidebar = ({ activePage, setActivePage }) => {
+  const navigate = useNavigate();
+
   const menuItems = [
     {
       key: "home",
@@ -16,6 +19,25 @@ const AdminSidebar = ({ activePage, setActivePage }) => {
       key: "users",
       label: "User Management",
       icon: Users,
+    },
+    {
+      key: "roles",
+      label: "Admin Roles",
+      icon: Shield,
+    },
+    {
+      key: "content",
+      label: "Content Manager", // 🔥 new page
+      icon: FileText,
+    },
+    {
+      key: "logout",
+      label: "Logout",
+      icon: LogOut,
+      onClick: () => {
+        localStorage.removeItem("adminToken");
+        navigate("/admin/login");
+      },
     },
   ];
 
@@ -63,13 +85,13 @@ const AdminSidebar = ({ activePage, setActivePage }) => {
       "
     >
       <ul className="list-none m-0 p-0">
-        {menuItems.map(({ key, label, icon: Icon }) => {
+        {menuItems.map(({ key, label, icon: Icon, onClick }) => {
           const isActive = activePage === key;
 
           return (
             <li
               key={key}
-              onClick={() => setActivePage(key)}
+              onClick={onClick ? onClick : () => setActivePage(key)}
               className={`
                 ${baseClasses}
                 ${isActive ? activeClasses : inactiveClasses}

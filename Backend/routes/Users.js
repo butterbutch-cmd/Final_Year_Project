@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const { User, validate } = require('../models/User');
 const bcrypt = require('bcrypt');
+const sendEmail = require("../utils/sendEmail"); // ✅ For sending block/unblock emails
 
 // ---------------- CREATE USER ----------------
 router.post("/", async (req, res) => {
@@ -25,6 +26,7 @@ router.post("/", async (req, res) => {
 
     res.status(201).send({ message: "User created successfully" });
   } catch (err) {
+    console.error("Create user error:", err);
     res.status(500).send({ message: "Internal Server Error" });
   }
 });
@@ -35,19 +37,51 @@ router.get("/", async (req, res) => {
     const users = await User.find().sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
+    console.error("Get users error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// ---------------- UPDATE USER ----------------
+// ---------------- UPDATE USER (BLOCK/UNBLOCK INCLUDED) ----------------
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const payload = req.body;
-    const updatedUser = await User.findByIdAndUpdate(id, payload, { new: true });
-    if (!updatedUser) return res.status(404).json({ message: "User not found" });
-    res.json(updatedUser);
+    const { isBlocked, blockReason, ...otherFields } = req.body;
+
+    // Prepare update object
+    const updateData = { ...otherFields };
+    if (typeof isBlocked === "boolean") {
+      updateData.isBlocked = isBlocked;
+      if (isBlocked) updateData.blockReason = blockReason || "";
+    }
+
+    // Update user in DB (without triggering full schema validation)
+    const user = await User.findByIdAndUpdate(id, updateData, { new: true });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Send block/unblock email
+    if (isBlocked && blockReason) {
+      const subject = "Account Blocked Notification";
+      const html = `
+        <p>Hi ${user.username},</p>
+        <p>Your account has been <strong>blocked</strong> by the admin.</p>
+        <p>Reason: ${blockReason}</p>
+        <p>If you think this is a mistake, please contact support.</p>
+      `;
+      await sendEmail(user.email, subject, html);
+    } else if (!isBlocked) {
+      const subject = "Account Unblocked";
+      const html = `
+        <p>Hi ${user.username},</p>
+        <p>Your account has been <strong>unblocked</strong> by the admin. You can now log in.</p>
+        <p>Welcome back!</p>
+      `;
+      await sendEmail(user.email, subject, html);
+    }
+
+    res.json({ message: "User updated successfully", user });
   } catch (err) {
+    console.error("Update user error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -60,6 +94,7 @@ router.delete("/:id", async (req, res) => {
     if (!deletedUser) return res.status(404).json({ message: "User not found" });
     res.json({ message: "User deleted successfully" });
   } catch (err) {
+    console.error("Delete user error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

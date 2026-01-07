@@ -1,3 +1,4 @@
+/// file location: Final_Year_Project/src/Components/ProductSection.jsx
 import React, { useEffect, useState } from "react";
 import PlantCard from "./ProductCard/PlantCard";
 import { getProducts } from "../services/productAPI";

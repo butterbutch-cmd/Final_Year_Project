@@ -9,10 +9,9 @@ const DataTable = ({
   renderRow,
   actions,
 
-  /* NEW */
-  searchableKeys = [], // ["name", "email"]
-  filterOptions = [],  // [{ label: "Admin", value: "admin" }]
-  filterKey = "",      // "role"
+  searchableKeys = [],
+  filterOptions = [],
+  filterKey = "",
 
   itemsPerPage = 5,
   emptyState = "No data available",
@@ -25,7 +24,7 @@ const DataTable = ({
   const processedData = useMemo(() => {
     let result = [...data];
 
-    // Search
+    // 🔍 SEARCH
     if (search && searchableKeys.length > 0) {
       result = result.filter((item) =>
         searchableKeys.some((key) =>
@@ -36,9 +35,19 @@ const DataTable = ({
       );
     }
 
-    // Filter
+    // 🎯 FILTER (supports arrays like tags)
     if (filter !== "all" && filterKey) {
-      result = result.filter((item) => item[filterKey] === filter);
+      result = result.filter((item) => {
+        const value = item[filterKey];
+
+        // if it's an array (like tags)
+        if (Array.isArray(value)) {
+          return value.includes(filter);
+        }
+
+        // normal value
+        return value === filter;
+      });
     }
 
     return result;
@@ -52,7 +61,6 @@ const DataTable = ({
     return processedData.slice(start, start + itemsPerPage);
   }, [processedData, currentPage, itemsPerPage]);
 
-  // Reset page when search/filter changes
   const resetPage = () => setCurrentPage(1);
 
   return (
@@ -160,51 +168,6 @@ const DataTable = ({
           </tbody>
         </table>
       </div>
-
-      {/* ---------- PAGINATION ---------- */}
-      {totalPages > 1 && (
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-wrap justify-between items-center gap-4">
-          <span className="text-sm text-gray-700">
-            Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
-            <span className="font-medium">{Math.min(currentPage * itemsPerPage, processedData.length)}</span> of{" "}
-            <span className="font-medium">{processedData.length}</span> results
-          </span>
-
-          <div className="flex gap-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  currentPage === i + 1
-                    ? "bg-emerald-600 text-white border border-emerald-600 shadow-sm"
-                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-
-            <button
-              onClick={() =>
-                setCurrentPage((p) => Math.min(totalPages, p + 1))
-              }
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

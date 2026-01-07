@@ -1,16 +1,21 @@
 import AdminHeader from "./components/AdminHeader";
 import AdminSidebar from "./components/AdminSidebar";
 
-const AdminLayout = ({ children, setActivePage, activePage }) => {
+const AdminLayout = ({ children, setActivePage, activePage, userRole }) => {
   return (
-    <div>
+    <div className="min-h-screen flex flex-col">
+      {/* Top header */}
       <AdminHeader />
-      <div style={{ display: "flex" }}>
-        <AdminSidebar 
+
+      {/* Sidebar + Main content */}
+      <div className="flex flex-1">
+        <AdminSidebar
           activePage={activePage}
-          setActivePage={setActivePage} 
+          setActivePage={setActivePage}
+          userRole={userRole} // 🔥 pass user role to sidebar
         />
-        <main style={{ flex: 1, minWidth: 0 }}>
+
+        <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>
       </div>

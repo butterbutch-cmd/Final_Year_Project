@@ -1,17 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Users,
-  UserPlus,
-  UserX,
-  UserCheck,
-  Trash2,
-} from "lucide-react";
+import { Users, UserPlus, UserX, UserCheck, Trash2 } from "lucide-react";
 
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
-
-// NOTE: create a ../../services/userAPI with getUsers, updateUser, deleteUser
-import { getUsers, updateUser, deleteUser } from "../../services/productAPI";
+import { getUsers, deleteUser, blockUser, unblockUser } from "../../services/userAPI";
 
 const formatDate = (iso) => {
   try {
@@ -27,12 +19,18 @@ const UserManager = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  /* ---------- FETCH ---------- */
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [blockReason, setBlockReason] = useState("");
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const data = await getUsers();
-      setUsers(Array.isArray(data) ? data : []);
+      const onlyUsers = (Array.isArray(data) ? data : []).filter(
+        (u) => u.role === "user"
+      );
+      setUsers(onlyUsers);
     } catch (err) {
       console.error("fetchUsers:", err);
       setUsers([]);
@@ -45,16 +43,42 @@ const UserManager = () => {
     fetchUsers();
   }, []);
 
-  /* ---------- ACTIONS ---------- */
-  const handleBlockToggle = async (user) => {
-    const id = user._id || user.id || user.userid;
+  /* ---------- BLOCK MODAL ---------- */
+  const openBlockModal = (user) => {
+    setSelectedUser(user);
+    setBlockReason("");
+    setBlockModalOpen(true);
+  };
+
+  const sendBlock = async () => {
+    if (!blockReason.trim()) return alert("Please provide a reason");
+
     try {
-      // toggle isBlocked flag (assumes user model has `isBlocked` boolean)
-      await updateUser(id, { isBlocked: !user.isBlocked });
+      const userId = selectedUser._id || selectedUser.id || selectedUser.userid;
+      await blockUser(userId, blockReason);
+      setBlockModalOpen(false);
+      fetchUsers();
+      alert("User blocked and email sent");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to block user");
+    }
+  };
+
+  const handleToggleBlock = async (user) => {
+    try {
+      const userId = user._id || user.id || user.userid;
+      if (user.isBlocked) {
+        await unblockUser(userId);
+        alert("User unblocked and email sent");
+      } else {
+        openBlockModal(user); // open modal to enter reason
+        return;
+      }
       fetchUsers();
     } catch (err) {
-      console.error("handleBlockToggle:", err);
-      alert("Failed to update user status");
+      console.error(err);
+      alert(err.message || "Failed to update block status");
     }
   };
 
@@ -64,7 +88,7 @@ const UserManager = () => {
       await deleteUser(id);
       fetchUsers();
     } catch (err) {
-      console.error("handleDelete:", err);
+      console.error(err);
       alert("Failed to delete user");
     }
   };
@@ -77,7 +101,7 @@ const UserManager = () => {
     const total = users.length;
     const blocked = users.filter((u) => !!u.isBlocked).length;
     const newUsers = users.filter((u) => {
-      const created = new Date(u.createdAt || u.registeredAt || u.createdAtAt || null);
+      const created = new Date(u.createdAt || u.registeredAt || null);
       if (!created || Number.isNaN(created.getTime())) return false;
       return now - created.getTime() <= sevenDaysMs;
     }).length;
@@ -110,15 +134,13 @@ const UserManager = () => {
     ];
   }, [users]);
 
-  /* ---------- ROLES FOR FILTER ---------- */
-  const roleOptions = useMemo(() => {
-    const roles = Array.from(new Set(users.map((u) => u.role || "user")));
-    return roles.map((r) => ({ label: r[0].toUpperCase() + r.slice(1), value: r }));
-  }, [users]);
+  const statusOptions = useMemo(() => [
+    { label: "Active", value: "active" },
+    { label: "Blocked", value: "blocked" },
+  ], []);
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      {/* ---------- DASHBOARD ---------- */}
       <StatCard
         pageTitle="User Management"
         pageSubtitle="Overview & user actions"
@@ -127,38 +149,32 @@ const UserManager = () => {
         stats={statsData}
       />
 
-      {/* ---------- USER TABLE ---------- */}
       <DataTable
         title="Users"
         subtitle="Manage registered users"
-        columns={["User ID", "Name", "Email", "Role", "Status", "Registered"]}
+        columns={["User ID", "Name", "Email", "Status", "Registered"]}
         data={users}
-
-        /* 🔍 SEARCH */
         searchableKeys={["username", "email"]}
-
-        /* 🎯 FILTER */
-        filterKey="role"
-        filterOptions={roleOptions}
-
+        filterKey="status"
+        filterOptions={statusOptions}
         renderRow={(user) => {
           const id = user._id || user.id || user.userid || "—";
-
           const statusLabel = user.isBlocked ? "Blocked" : "Active";
-          const statusStyle = user.isBlocked ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700";
-
-          const createdAt = user.createdAt || user.registeredAt || user.createdAtAt || null;
+          const statusStyle = user.isBlocked
+            ? "bg-red-100 text-red-700"
+            : "bg-green-100 text-green-700";
+          const createdAt = user.createdAt || user.registeredAt || null;
 
           return (
             <>
-              {/* User ID */}
               <td className="px-4 py-4 text-xs text-gray-500">{id}</td>
-
-              {/* Name */}
               <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={user.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || "User")}`}
+                    src={
+                      user.profilePic ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || "User")}`
+                    }
                     alt={user.username}
                     className="w-10 h-10 rounded-full object-cover"
                   />
@@ -168,36 +184,25 @@ const UserManager = () => {
                   </div>
                 </div>
               </td>
-
-              {/* Email */}
               <td className="px-4 py-4 text-sm">{user.email || "—"}</td>
-
-              {/* Role */}
-              <td className="px-4 py-4 text-sm">{user.role || "user"}</td>
-
-              {/* Status */}
               <td className="px-4 py-4 text-sm">
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle}`}>
                   {statusLabel}
                 </span>
               </td>
-
-              {/* Registered */}
               <td className="px-4 py-4 text-sm">{formatDate(createdAt)}</td>
             </>
           );
         }}
-
         actions={(user) => (
           <div className="flex justify-center gap-2">
             <button
-              onClick={() => handleBlockToggle(user)}
+              onClick={() => handleToggleBlock(user)}
               className={`p-2 rounded-lg border hover:bg-gray-50 ${user.isBlocked ? "bg-yellow-50" : "bg-gray-100"}`}
               title={user.isBlocked ? "Unblock user" : "Block user"}
             >
               {user.isBlocked ? <UserCheck size={16} /> : <UserX size={16} />}
             </button>
-
             <button
               onClick={() => handleDelete(user._id || user.id || user.userid)}
               className="p-2 bg-gray-100 rounded-lg text-red-500 hover:bg-red-50"
@@ -209,10 +214,39 @@ const UserManager = () => {
         )}
       />
 
-      {/* Loading overlay */}
       {loading && (
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center">
           <div className="bg-white p-4 rounded-lg">Loading users...</div>
+        </div>
+      )}
+
+      {/* ---------- BLOCK MODAL ---------- */}
+      {blockModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h2 className="text-lg font-semibold mb-4">Block User</h2>
+            <p className="mb-2">Reason for blocking {selectedUser.username}:</p>
+            <textarea
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              rows={4}
+              className="w-full border rounded p-2 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setBlockModalOpen(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={sendBlock}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Send & Block
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
