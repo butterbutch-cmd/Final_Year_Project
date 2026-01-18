@@ -92,7 +92,7 @@ const AdminLogin = () => {
             type="submit"
             className="w-full bg-black text-white py-2 rounded hover:bg-gray-800 transition"
           >
-            {isSignup ? "Create Super Admin" : "Login as Super Admin"}
+            {isSignup ? "Create Super Admin" : "Login"}
           </button>
         </form>
 

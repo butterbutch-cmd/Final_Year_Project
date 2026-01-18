@@ -1,8 +1,111 @@
+// const mongoose = require("mongoose");
+// const jwt = require("jsonwebtoken");
+// const Joi = require("joi");
+
+// // -------------------- SCHEMA --------------------
+// const userSchema = new mongoose.Schema(
+//   {
+//     username: { 
+//       type: String, 
+//       required: true, 
+//       unique: true, 
+//       trim: true 
+//     },
+
+//     email: { 
+//       type: String, 
+//       required: true, 
+//       unique: true, 
+//       lowercase: true, 
+//       trim: true 
+//     },
+
+//     // phoneNumber: {
+//     //   type: String,
+//     //   required: true,
+//     //   unique: true,
+//     //   trim: true,
+//     // },
+
+//     password: { 
+//       type: String, 
+//       required: function () {
+//         return this.authProvider === "local";
+//       },
+//     },
+
+//     authProvider: {
+//       type: String,
+//       enum: ["local", "google"],
+//       required: true,
+//       default: "local",
+//     },
+
+//     firebaseUid: String,
+//     profilePic: String,
+
+//     resetOtp: String,
+//     resetOtpExpire: Date,
+
+//     isBlocked: { type: Boolean, default: false },
+
+//     role: { 
+//       type: String, 
+//       enum: ["user", "admin", "super_admin", "moderator"], 
+//       default: "user" 
+//     },
+
+//     // 🔥 optional invitation token for email-based login
+//     invitationToken: String,
+//     invitationExpires: Date,
+//   },
+//   { timestamps: true }
+// );
+
+// // -------------------- JWT TOKEN --------------------
+// userSchema.methods.generateAuthToken = function () {
+//   const token = jwt.sign(
+//     { 
+//       _id: this._id, 
+//       username: this.username,
+//       role: this.role,
+//     },
+//     process.env.JWT_SECRET,
+//     { expiresIn: "1d" }
+//   );
+
+//   return token;
+// };
+
+// // -------------------- VALIDATION --------------------
+// const validate = (data) => {
+//   const schema = Joi.object({
+//     username: Joi.string().required().label("Username"),
+//     email: Joi.string().email().required().label("Email"),
+//     phoneNumber: Joi.string().required().label("Phone Number"),
+//     password: Joi.string().required().label("Password"),
+//   });
+//   return schema.validate(data);
+// };
+
+// const validateLogin = (data) => {
+//   const schema = Joi.object({
+//     email: Joi.string().email().required().label("Email"),
+//     password: Joi.string().required().label("Password"),
+//   });
+//   return schema.validate(data);
+// };
+
+// const User = mongoose.model("User", userSchema);
+
+// module.exports = { User, validate, validateLogin };
+
+
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const Joi = require("joi");
 
-// -------------------- SCHEMA --------------------
+// ==================== SCHEMA ====================
 const userSchema = new mongoose.Schema(
   {
     username: { 
@@ -20,13 +123,6 @@ const userSchema = new mongoose.Schema(
       trim: true 
     },
 
-    phoneNumber: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-
     password: { 
       type: String, 
       required: function () {
@@ -41,13 +137,35 @@ const userSchema = new mongoose.Schema(
       default: "local",
     },
 
-    firebaseUid: String,
-    profilePic: String,
+    firebaseUid: {
+      type: String,
+      default: null
+    },
 
-    resetOtp: String,
-    resetOtpExpire: Date,
+    profilePic: {
+      type: String,
+      default: ""
+    },
 
-    isBlocked: { type: Boolean, default: false },
+    resetOtp: {
+      type: String,
+      default: null
+    },
+
+    resetOtpExpire: {
+      type: Date,
+      default: null
+    },
+
+    isBlocked: { 
+      type: Boolean, 
+      default: false 
+    },
+
+    blockReason: {
+      type: String,
+      default: ""
+    },
 
     role: { 
       type: String, 
@@ -55,14 +173,21 @@ const userSchema = new mongoose.Schema(
       default: "user" 
     },
 
-    // 🔥 optional invitation token for email-based login
-    invitationToken: String,
-    invitationExpires: Date,
+    // Optional invitation system
+    invitationToken: {
+      type: String,
+      default: null
+    },
+
+    invitationExpires: {
+      type: Date,
+      default: null
+    },
   },
   { timestamps: true }
 );
 
-// -------------------- JWT TOKEN --------------------
+// ==================== JWT TOKEN ====================
 userSchema.methods.generateAuthToken = function () {
   const token = jwt.sign(
     { 
@@ -77,14 +202,14 @@ userSchema.methods.generateAuthToken = function () {
   return token;
 };
 
-// -------------------- VALIDATION --------------------
+// ==================== VALIDATION ====================
 const validate = (data) => {
   const schema = Joi.object({
-    username: Joi.string().required().label("Username"),
+    username: Joi.string().min(3).max(30).required().label("Username"),
     email: Joi.string().email().required().label("Email"),
-    phoneNumber: Joi.string().required().label("Phone Number"),
-    password: Joi.string().required().label("Password"),
+    password: Joi.string().min(6).required().label("Password"),
   });
+
   return schema.validate(data);
 };
 
@@ -93,9 +218,11 @@ const validateLogin = (data) => {
     email: Joi.string().email().required().label("Email"),
     password: Joi.string().required().label("Password"),
   });
+
   return schema.validate(data);
 };
 
+// ==================== MODEL ====================
 const User = mongoose.model("User", userSchema);
 
 module.exports = { User, validate, validateLogin };

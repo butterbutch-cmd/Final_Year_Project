@@ -1,3 +1,5 @@
+/// file location: Final_Year_Project/Backend/routes/mail.js
+
 const express = require("express");
 const router = express.Router();
 const nodemailer = require("nodemailer");
