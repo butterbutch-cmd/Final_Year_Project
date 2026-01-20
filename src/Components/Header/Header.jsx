@@ -124,8 +124,11 @@ export default function Header() {
         <div className="HeaderContainer2">
           <nav className="Nav-Bar">
             <ul>
-              <li><Link to="/">SHOP</Link></li>
-              <li><Link to="/pots">POTS</Link></li>
+              <li><Link to="/">NEW ARRIVAL</Link></li>
+              <li><Link to="/pots">LARGE PLANT</Link></li>
+              <li><Link to="/pots">INDOOR PLANT</Link></li>
+              <li><Link to="/pots">OUTDOOR PLANT</Link></li>
+              <li><Link to="/pots">SALES</Link></li>
               <li><Link to="/forum">FORUM</Link></li>
               <li><Link to="/blog">BLOG</Link></li>
               <li><Link to="/contact">CONTACT</Link></li>

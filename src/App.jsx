@@ -7,6 +7,7 @@ import AdminPanel from "./admin/AdminPanel";
 import AdminLogin from "./admin/pages/AdminLogin"; // 🔥 Admin Login Page
 import ProtectedRoute from "./admin/ProtectedRoute"; // 🔥 ProtectedRoute wrapper
 import { AuthProvider } from "./context/AuthContext";
+import ProductPage from "./Pages/ProductPage";
 import "./App.css";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/LoginPage" element={<LoginPage />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/testmail" element={<TestMail />} />
+            <Route path="/product/:id" element={<ProductPage/>}/>
 
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

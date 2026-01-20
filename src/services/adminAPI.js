@@ -1,68 +1,66 @@
-// ================= BASE URL =================
+/// file: src/services/adminAPI.js
 const BASE_URL = "http://localhost:5000";
 
-// ================= GET TOKEN =================
-const getToken = () => {
-  return localStorage.getItem("adminToken"); // 🔥 FIXED
-};
+// -----------------------
+// Get token from localStorage
+// -----------------------
+const getToken = () => localStorage.getItem("adminToken");
 
-// ================= AUTH HEADER =================
 const authHeader = () => ({
   Authorization: `Bearer ${getToken()}`,
 });
 
-// ================= GET ADMINS & MODERATORS =================
-export const getAdmins = async () => {
-  const res = await fetch(`${BASE_URL}/api/admins`, {
-    headers: authHeader(),
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch admins");
-  }
-
-  return res.json();
-};
-
-// ================= CREATE ADMIN =================
-export const createAdmin = async (payload) => {
-  const res = await fetch(`${BASE_URL}/api/admins`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to create admin");
-
+// -----------------------
+const handleResponse = async (res) => {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Request failed");
   return data;
 };
 
-// ================= UPDATE ADMIN =================
+// -----------------------
+// Admin endpoints
+// -----------------------
+export const getAdmins = async () => {
+  const res = await fetch(`${BASE_URL}/api/admins`, { headers: authHeader() });
+  return handleResponse(res);
+};
+
+export const createAdmin = async (payload) => {
+  const res = await fetch(`${BASE_URL}/api/admins`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+};
+
 export const updateAdmin = async (id, payload) => {
   const res = await fetch(`${BASE_URL}/api/admins/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
-    },
+    headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(payload),
   });
-
-  return res.json();
+  return handleResponse(res);
 };
 
-// ================= DELETE ADMIN =================
 export const deleteAdmin = async (id) => {
   const res = await fetch(`${BASE_URL}/api/admins/${id}`, {
     method: "DELETE",
     headers: authHeader(),
   });
+  return handleResponse(res);
+};
 
-  if (!res.ok) throw new Error("Failed to delete admin");
+// 🔑 Get current admin profile with permissions
+export const getMyAdminProfile = async () => {
+  const res = await fetch(`${BASE_URL}/api/admins/me`, { headers: authHeader() });
+  return handleResponse(res);
+};
 
-  return res.json();
+// -----------------------
+// Product endpoints
+// -----------------------
+export const getProducts = async () => {
+  const res = await fetch(`${BASE_URL}/api/products`, { headers: authHeader() });
+  return handleResponse(res);
 };

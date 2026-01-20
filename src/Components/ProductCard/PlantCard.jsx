@@ -1,6 +1,10 @@
-import React from "react";
 import { Star } from "lucide-react";
 import "./PlantCard.css";
+
+const onclick = ()=>{
+  console.log("Plant card was clicked");
+  
+}
 
 const PlantCard = ({
   name,
@@ -13,7 +17,7 @@ const PlantCard = ({
   rating = 5
 }) => {
   return (
-    <div className="plant-card">
+    <div className="plant-card" onClick={onclick}>
       <div className="image-wrapper">
         {onSale && <span className="sale-badge">On Sale</span>}
         <img src={image} alt={name} />

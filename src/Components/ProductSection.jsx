@@ -1,7 +1,7 @@
 /// file location: Final_Year_Project/src/Components/ProductSection.jsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import PlantCard from "./ProductCard/PlantCard";
-import { getProducts } from "../services/productAPI";
+import { getProducts } from "../services/publicAPI";
 import { Link } from "react-router-dom";
 
 const ProductSection = ({ title, filterKey }) => {
