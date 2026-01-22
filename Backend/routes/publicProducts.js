@@ -1,3 +1,4 @@
+//file: Final_Year_Project/Backend/routes/publicProducts.js
 const express = require("express");
 const Product = require("../models/Product");
 

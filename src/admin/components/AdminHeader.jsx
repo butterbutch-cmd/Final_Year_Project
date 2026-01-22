@@ -1,19 +1,73 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Inbox } from "lucide-react";
 
 export default function AdminHeader() {
-  // Placeholder state for now; will be linked to API later
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Dummy admin data; later replace with actual fetched data
-  const adminInfo = {
+  const [adminInfo, setAdminInfo] = useState({
     name: "Admin User",
-    role: "Super Admin",
+    role: "Loading...",
     avatar: "https://i.pinimg.com/736x/a9/f4/f0/a9f4f0c03220e7dd5d0c60a9add61c42.jpg",
+  });
+
+  // Decode JWT function
+  const decodeToken = (token) => {
+    try {
+      const payload = token.split(".")[1];
+      return JSON.parse(atob(payload));
+    } catch (err) {
+      console.error("Invalid token", err);
+      return null;
+    }
   };
 
+  // Format role nicely for UI
+  const formatRole = (role) => {
+    if (!role) return "Admin";
+
+    if (role === "super_admin") return "Super Admin";
+    if (role === "admin") return "Admin";
+
+    // Fallback: Capitalize words
+    return role
+
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+
+    if (token) {
+      const decoded = decodeToken(token);
+
+      if (decoded) {
+        // 🔥 PRINT FULL JWT CONTENT TO CONSOLE
+        console.log("🛡️ Decoded JWT Payload:", decoded);
+
+        // Optional: Pretty print each field
+        Object.entries(decoded).forEach(([key, value]) => {
+          console.log(`🔹 ${key}:`, value);
+        });
+
+        setAdminInfo((prev) => ({
+          ...prev,
+          // 👇 Pull username instead of name
+          name: decoded.username || "Admin User",
+          role: formatRole(decoded.role),
+        }));
+      }
+    } else {
+      console.warn("⚠️ No adminToken found in localStorage");
+
+      setAdminInfo((prev) => ({
+        ...prev,
+        role: "Not Logged In",
+      }));
+    }
+  }, []);
+
+
+
   const handleSearch = () => {
-    // For now, just log the query; later replace with API call
     console.log("Searching for:", searchQuery);
   };
 

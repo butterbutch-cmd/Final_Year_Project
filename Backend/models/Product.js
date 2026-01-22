@@ -8,6 +8,13 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // 🏷️ Category for breadcrumb & filtering
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     subtitle: {
       type: String,
       trim: true,
@@ -17,9 +24,23 @@ const productSchema = new mongoose.Schema(
       type: String,
     },
 
+    // 🖼️ Primary Image
     image: {
       type: String,
       required: true,
+    },
+
+    // 🖼️ Secondary Images
+    image1: {
+      type: String,
+    },
+
+    image2: {
+      type: String,
+    },
+
+    image3: {
+      type: String,
     },
 
     price: {

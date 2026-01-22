@@ -1,3 +1,4 @@
+//file: Final_Year_Project/Backend/middleware/authenticate.js
 const jwt = require("jsonwebtoken");
 const { User } = require("../models/User");
 
