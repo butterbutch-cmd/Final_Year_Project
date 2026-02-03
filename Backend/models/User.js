@@ -32,6 +32,52 @@ const permissionsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ==================== ADDRESS SUB-SCHEMA ====================
+const addressSchema = new mongoose.Schema(
+  {
+    fullName: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    street: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    city: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    state: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    postalCode: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    country: {
+      type: String,
+      trim: true,
+      default: "Nepal",
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: true, timestamps: true }
+);
+
 // ==================== USER SCHEMA ====================
 const userSchema = new mongoose.Schema(
   {
@@ -51,9 +97,6 @@ const userSchema = new mongoose.Schema(
 
     phoneNumber: {
       type: String,
-      required: function () {
-        return this.role !== "user"; // admins/moderators must have phone
-      },
       trim: true,
       default: "",
     },
@@ -80,6 +123,12 @@ const userSchema = new mongoose.Schema(
     profilePic: {
       type: String,
       default: "",
+    },
+
+    // ==================== ADDRESSES ====================
+    addresses: {
+      type: [addressSchema],
+      default: [],
     },
 
     // ==================== PASSWORD RESET ====================
@@ -124,9 +173,15 @@ const userSchema = new mongoose.Schema(
             content: { view: true, create: true, edit: true, delete: true },
           };
         }
-
-        return undefined; // admins/moderators use schema defaults
+        return undefined;
       },
+    },
+
+    // ==================== WISHLIST ====================
+    wishlist: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Product", // Change to your product/plant model name
+      default: [],
     },
   },
   { timestamps: true }
@@ -146,7 +201,9 @@ userSchema.methods.generateAuthToken = function () {
   );
 };
 
-// ==================== VALIDATION ====================
+// ==================== VALIDATIONS ====================
+
+// Permission Joi
 const permissionJoi = Joi.object({
   view: Joi.boolean().required(),
   create: Joi.boolean().required(),
@@ -154,12 +211,13 @@ const permissionJoi = Joi.object({
   delete: Joi.boolean().required(),
 });
 
+// -------------------- USER SIGNUP (FULL) --------------------
 const validate = (data) => {
   const schema = Joi.object({
     username: Joi.string().min(3).max(30).required().label("Username"),
     email: Joi.string().email().required().label("Email"),
-    phoneNumber: Joi.string().min(6).max(20).required().label("Phone Number"),
-    password: Joi.string().min(6).optional().label("Password"),
+    phoneNumber: Joi.string().allow("").optional().label("Phone Number"),
+    password: Joi.string().min(6).required().label("Password"),
     role: Joi.string()
       .valid("user", "admin", "super_admin", "moderator")
       .required(),
@@ -176,6 +234,29 @@ const validate = (data) => {
   return schema.validate(data);
 };
 
+// -------------------- USER SIGNUP (PUBLIC) --------------------
+const validateUserSignup = (data) => {
+  const schema = Joi.object({
+    username: Joi.string().min(3).max(30).required().label("Username"),
+    email: Joi.string().email().required().label("Email"),
+    password: Joi.string().min(6).required().label("Password"),
+  });
+
+  return schema.validate(data);
+};
+
+// -------------------- ADMIN SIGNUP (DEV ONLY) --------------------
+const validateAdminSignup = (data) => {
+  const schema = Joi.object({
+    username: Joi.string().min(3).max(30).required().label("Username"),
+    email: Joi.string().email().required().label("Email"),
+    password: Joi.string().min(6).required().label("Password"),
+  });
+
+  return schema.validate(data);
+};
+
+// -------------------- LOGIN --------------------
 const validateLogin = (data) => {
   const schema = Joi.object({
     email: Joi.string().email().required().label("Email"),
@@ -188,8 +269,11 @@ const validateLogin = (data) => {
 // ==================== MODEL ====================
 const User = mongoose.model("User", userSchema);
 
+// ==================== EXPORTS ====================
 module.exports = {
   User,
   validate,
+  validateAdminSignup,
   validateLogin,
+  validateUserSignup,
 };

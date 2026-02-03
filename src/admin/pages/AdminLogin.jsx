@@ -100,7 +100,7 @@ const AdminLogin = () => {
           className="text-sm text-center mt-4 cursor-pointer text-blue-600"
           onClick={() => setIsSignup(!isSignup)}
         >
-          {/* {isSignup ? "Already have admin? Login" : "No admin yet? Create one (Dev only)"} */}
+         {/* {isSignup ? "Already have admin? Login" : "No admin yet? Create one (Dev only)"}  */}
         </p>
       </div>
     </div>

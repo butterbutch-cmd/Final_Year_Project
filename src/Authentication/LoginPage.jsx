@@ -18,11 +18,15 @@ export default function LoginPage() {
   });
 
   // -----------------------
+  // Handle input change
+  // -----------------------
   const handleChange = (e) => {
     const { name, value } = e.target;
     setLoginData({ ...loginData, [name]: value });
   };
 
+  // -----------------------
+  // LOCAL LOGIN
   // -----------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,20 +39,22 @@ export default function LoginPage() {
         loginData
       );
 
-      // 🔑 Save under adminToken
-      localStorage.setItem("adminToken", res.data.jwt);
+      localStorage.setItem("token", res.data.jwt);
       setUser(res.data.user);
-
-      navigate("/admin"); // go to AdminPanel
+      navigate("/");
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed. Please try again."
-      );
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // -----------------------
+  // GOOGLE LOGIN
   // -----------------------
   const googleSignin = async () => {
     setError("");
@@ -57,29 +63,42 @@ export default function LoginPage() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
+
       const idToken = await firebaseUser.getIdToken();
 
-      const res = await axios.post("http://localhost:5000/api/auth/google", {
-        token: idToken,
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google",
+        { token: idToken }
+      );
 
-      localStorage.setItem("adminToken", res.data.jwt);
+      localStorage.setItem("token", res.data.jwt);
       setUser(res.data.user);
-
-      navigate("/admin");
+      navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Google Sign-in failed");
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Google Sign-in failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // -----------------------
+  // UI
+  // -----------------------
   return (
     <div className="signup_container1">
       <h1>Welcome Back</h1>
 
       <div className="signup_form">
-        {error && <p style={{ color: "red", marginBottom: "10px" }}>{error}</p>}
+        {/* 🔴 Error Message */}
+        {error && (
+          <p style={{ color: "red", marginBottom: "10px" }}>
+            {error}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit}>
           <input
@@ -89,6 +108,7 @@ export default function LoginPage() {
             onChange={handleChange}
             required
           />
+
           <input
             type="password"
             name="password"
@@ -97,15 +117,35 @@ export default function LoginPage() {
             onChange={handleChange}
             required
           />
+
           <button type="submit" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
+
+          <p
+            onClick={() => navigate("/TestMail")}
+            style={{
+              cursor: "pointer",
+              color: "blue",
+              marginTop: "8px",
+            }}
+          >
+            Forgot Password?
+          </p>
         </form>
 
         <hr style={{ margin: "20px 0" }} />
 
         <button onClick={googleSignin} disabled={loading}>
           Continue with Google
+        </button>
+
+        <p style={{ marginTop: "10px" }}>
+          Don&apos;t have an account?
+        </p>
+
+        <button onClick={() => navigate("/signup")}>
+          Go to Signup
         </button>
       </div>
     </div>

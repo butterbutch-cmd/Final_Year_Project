@@ -1,4 +1,4 @@
-/// file location: Final_Year_Project/src/Components/ProductSection.jsx
+// Final_Year_Project/src/Components/ProductSection.jsx
 import { useEffect, useState } from "react";
 import PlantCard from "./ProductCard/PlantCard";
 import { getProducts } from "../services/publicAPI";
@@ -35,7 +35,10 @@ const ProductSection = ({ title, filterKey }) => {
       >
         {products.slice(0, 4).map((product) => (
           <Link key={product._id} to={`/product/${product._id}`}>
-            <PlantCard {...product} />
+            <PlantCard
+              {...product}
+              image={product.image1 || "/fallback-image.png"} // use image1 as main
+            />
           </Link>
         ))}
       </div>
