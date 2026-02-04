@@ -69,6 +69,9 @@ import ProductPage from "./Pages/ProductPage";
 import UserProfilePage from "./Pages/UserProfilePage";
 import OrdersPage from "./Pages/OrderPage";       
 import WishlistPage from "./Pages/WishlistPage"; 
+import PaymentForm from "./Payment/Components/PaymentForm"; 
+import Success from "./Payment/Components/Success";       // ✅ import Success
+import Failure from "./Payment/Components/Failure";       // ✅ import Failure
 import "./App.css";
 
 export default function App() {
@@ -109,6 +112,18 @@ export default function App() {
                 </UserProtectedRoute>
               }
             />
+            <Route
+              path="/checkout"
+              element={
+                <UserProtectedRoute>
+                  <PaymentForm/>
+                </UserProtectedRoute>
+              }
+            />
+
+            {/* Payment result routes */}
+            <Route path="/payment-success" element={<Success />} />
+            <Route path="/payment-failure" element={<Failure />} />
 
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

@@ -35,16 +35,6 @@ const permissionsSchema = new mongoose.Schema(
 // ==================== ADDRESS SUB-SCHEMA ====================
 const addressSchema = new mongoose.Schema(
   {
-    fullName: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    phoneNumber: {
-      type: String,
-      trim: true,
-      required: true,
-    },
     street: {
       type: String,
       trim: true,
