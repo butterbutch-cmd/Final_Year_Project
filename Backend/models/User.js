@@ -1,8 +1,82 @@
+// models/User.js
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const Joi = require("joi");
 
-// ==================== PERMISSIONS SUB-SCHEMA ====================
+/* ==================== CART ITEM SUB-SCHEMA ==================== */
+const cartItemSchema = new mongoose.Schema(
+  {
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      min: 1,
+      default: 1,
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true, // snapshot price
+    },
+  },
+  { _id: true }
+);
+
+/* ==================== ORDER ITEM SUB-SCHEMA ==================== */
+const orderItemSchema = new mongoose.Schema(
+  {
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    quantity: { type: Number, min: 1, required: true },
+    price: { type: Number, required: true }, // snapshot price
+  },
+  { _id: true }
+);
+
+/* ==================== ADDRESS SUB-SCHEMA ==================== */
+const addressSchema = new mongoose.Schema(
+  {
+    street: { type: String, trim: true, required: true },
+    city: { type: String, trim: true, required: true },
+    state: { type: String, trim: true, default: "" },
+    postalCode: { type: String, trim: true, required: true },
+    country: { type: String, trim: true, default: "Nepal" },
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: true, timestamps: true }
+);
+
+/* ==================== ORDER SUB-SCHEMA ==================== */
+const orderSchema = new mongoose.Schema(
+  {
+    transactionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Transaction",
+      required: true,
+    },
+    items: {
+      type: [orderItemSchema],
+      default: [],
+    },
+    totalAmount: { type: Number, required: true },
+    paymentGateway: { type: String, required: true },
+    status: { type: String, enum: ["COMPLETED", "FAILED"], default: "COMPLETED" },
+    deliveryAddress: {
+      type: addressSchema,
+      required: true,
+    },
+    purchasedAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
+/* ==================== PERMISSIONS SUB-SCHEMA ==================== */
 const permissionSchema = new mongoose.Schema(
   {
     view: { type: Boolean, default: false },
@@ -32,43 +106,7 @@ const permissionsSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// ==================== ADDRESS SUB-SCHEMA ====================
-const addressSchema = new mongoose.Schema(
-  {
-    street: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    city: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    state: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    postalCode: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    country: {
-      type: String,
-      trim: true,
-      default: "Nepal",
-    },
-    isDefault: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  { _id: true, timestamps: true }
-);
-
-// ==================== USER SCHEMA ====================
+/* ==================== USER SCHEMA ==================== */
 const userSchema = new mongoose.Schema(
   {
     username: {
@@ -101,8 +139,8 @@ const userSchema = new mongoose.Schema(
     authProvider: {
       type: String,
       enum: ["local", "google"],
-      required: true,
       default: "local",
+      required: true,
     },
 
     firebaseUid: {
@@ -115,42 +153,47 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    // ==================== ADDRESSES ====================
+    /* ==================== ADDRESSES ==================== */
     addresses: {
       type: [addressSchema],
       default: [],
     },
 
-    // ==================== PASSWORD RESET ====================
-    resetOtp: {
-      type: String,
-      default: null,
+    /* ==================== CART ==================== */
+    cart: {
+      type: [cartItemSchema],
+      default: [],
     },
 
-    resetOtpExpire: {
-      type: Date,
-      default: null,
+    /* ==================== ORDERS ==================== */
+    orders: {
+      type: [orderSchema],
+      default: [],
     },
 
-    // ==================== ACCOUNT STATUS ====================
-    isBlocked: {
-      type: Boolean,
-      default: false,
+    /* ==================== WISHLIST ==================== */
+    wishlist: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Product",
+      default: [],
     },
 
-    blockReason: {
-      type: String,
-      default: "",
-    },
+    /* ==================== PASSWORD RESET ==================== */
+    resetOtp: { type: String, default: null },
+    resetOtpExpire: { type: Date, default: null },
 
-    // ==================== ROLE ====================
+    /* ==================== ACCOUNT STATUS ==================== */
+    isBlocked: { type: Boolean, default: false },
+    blockReason: { type: String, default: "" },
+
+    /* ==================== ROLE ==================== */
     role: {
       type: String,
       enum: ["user", "admin", "super_admin", "moderator"],
       default: "user",
     },
 
-    // ==================== PERMISSIONS ====================
+    /* ==================== PERMISSIONS ==================== */
     permissions: {
       type: permissionsSchema,
       default: function () {
@@ -166,18 +209,11 @@ const userSchema = new mongoose.Schema(
         return undefined;
       },
     },
-
-    // ==================== WISHLIST ====================
-    wishlist: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "Product", // Change to your product/plant model name
-      default: [],
-    },
   },
   { timestamps: true }
 );
 
-// ==================== JWT TOKEN ====================
+/* ==================== JWT TOKEN ==================== */
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign(
     {
@@ -191,9 +227,7 @@ userSchema.methods.generateAuthToken = function () {
   );
 };
 
-// ==================== VALIDATIONS ====================
-
-// Permission Joi
+/* ==================== VALIDATIONS ==================== */
 const permissionJoi = Joi.object({
   view: Joi.boolean().required(),
   create: Joi.boolean().required(),
@@ -201,69 +235,29 @@ const permissionJoi = Joi.object({
   delete: Joi.boolean().required(),
 });
 
-// -------------------- USER SIGNUP (FULL) --------------------
-const validate = (data) => {
-  const schema = Joi.object({
-    username: Joi.string().min(3).max(30).required().label("Username"),
-    email: Joi.string().email().required().label("Email"),
-    phoneNumber: Joi.string().allow("").optional().label("Phone Number"),
-    password: Joi.string().min(6).required().label("Password"),
-    role: Joi.string()
-      .valid("user", "admin", "super_admin", "moderator")
-      .required(),
-
-    permissions: Joi.object({
-      products: permissionJoi,
-      users: permissionJoi,
-      orders: permissionJoi,
-      payments: permissionJoi,
-      content: permissionJoi,
-    }).optional(),
-  });
-
-  return schema.validate(data);
-};
-
-// -------------------- USER SIGNUP (PUBLIC) --------------------
 const validateUserSignup = (data) => {
   const schema = Joi.object({
-    username: Joi.string().min(3).max(30).required().label("Username"),
-    email: Joi.string().email().required().label("Email"),
-    password: Joi.string().min(6).required().label("Password"),
+    username: Joi.string().min(3).max(30).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
   });
-
   return schema.validate(data);
 };
 
-// -------------------- ADMIN SIGNUP (DEV ONLY) --------------------
-const validateAdminSignup = (data) => {
-  const schema = Joi.object({
-    username: Joi.string().min(3).max(30).required().label("Username"),
-    email: Joi.string().email().required().label("Email"),
-    password: Joi.string().min(6).required().label("Password"),
-  });
-
-  return schema.validate(data);
-};
-
-// -------------------- LOGIN --------------------
 const validateLogin = (data) => {
   const schema = Joi.object({
-    email: Joi.string().email().required().label("Email"),
-    password: Joi.string().required().label("Password"),
+    email: Joi.string().email().required(),
+    password: Joi.string().required(),
   });
-
   return schema.validate(data);
 };
 
-// ==================== MODEL ====================
+/* ==================== MODEL ==================== */
 const User = mongoose.model("User", userSchema);
 
-// ==================== EXPORTS ====================
+/* ==================== EXPORTS ==================== */
 module.exports = {
   User,
-  validate,
-  validateAdminSignup,
-  validateLogin,
   validateUserSignup,
+  validateLogin,
 };

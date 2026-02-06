@@ -1,106 +1,123 @@
 // // // const Transaction = require("../models/paymentModel");
 // // // const { generateHmacSha256Hash } = require("../utils/helper");
 // // // const axios = require("axios");
+// // // const qs = require("querystring"); // for eSewa
 
+// // // // ===============================
+// // // // INITIATE PAYMENT
+// // // // ===============================
 // // // const initiatePayment = async (req, res) => {
 // // //   const {
 // // //     amount,
-// // //     productId,
+// // //     cartItems,
 // // //     paymentGateway,
 // // //     customerName,
 // // //     customerEmail,
 // // //     customerPhone,
-// // //     productName,
+// // //     deliveryAddress,
 // // //   } = req.body;
 
-// // //   if (!paymentGateway || !productId) {
+// // //   // ----------- VALIDATION -------------
+// // //   if (!paymentGateway || !cartItems || !deliveryAddress) {
 // // //     return res.status(400).json({ message: "Missing required fields" });
 // // //   }
 
+// // //   if (!cartItems.length) {
+// // //     return res.status(400).json({ message: "Cart is empty" });
+// // //   }
+
 // // //   try {
-// // //     // 1️⃣ SAVE TRANSACTION FIRST
+// // //     // 1️⃣ Save transaction in DB
 // // //     const transaction = await Transaction.create({
+// // //       user: req.user._id,
 // // //       customerDetails: {
 // // //         name: customerName,
 // // //         email: customerEmail,
 // // //         phone: customerPhone,
 // // //       },
-// // //       product_name: productName,
-// // //       product_id: productId,
+// // //       cartItems,       // store array of items
 // // //       amount,
 // // //       payment_gateway: paymentGateway,
 // // //       status: "PENDING",
+// // //       deliveryAddress,
 // // //     });
 
-// // //     console.log("✅ Transaction saved:", transaction._id);
+// // //     console.log("✅ Transaction created:", transaction._id.toString());
 
-// // //     let paymentConfig;
-
+// // //     // ===============================
+// // //     // ESEWA PAYMENT
+// // //     // ===============================
 // // //     if (paymentGateway === "esewa") {
 // // //       const paymentData = {
-// // //         amount,
-// // //         failure_url: process.env.FAILURE_URL,
-// // //         product_delivery_charge: "0",
-// // //         product_service_charge: "0",
-// // //         product_code: process.env.ESEWA_MERCHANT_ID,
-// // //         signed_field_names: "total_amount,transaction_uuid,product_code",
-// // //         success_url: process.env.SUCCESS_URL,
+// // //         amount: amount.toString(),
 // // //         tax_amount: "0",
-// // //         total_amount: amount,
-// // //         transaction_uuid: productId,
+// // //         total_amount: amount.toString(),
+// // //         transaction_uuid: transaction._id.toString(),
+// // //         product_code: process.env.ESEWA_MERCHANT_ID,
+// // //         product_service_charge: "0",
+// // //         product_delivery_charge: "0",
+// // //         success_url: process.env.SUCCESS_URL,
+// // //         failure_url: process.env.FAILURE_URL,
+// // //         signed_field_names: "total_amount,transaction_uuid,product_code",
 // // //       };
 
-// // //       const data = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
-// // //       const signature = generateHmacSha256Hash(data, process.env.ESEWA_SECRET);
+// // //       const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
+// // //       paymentData.signature = generateHmacSha256Hash(
+// // //         dataToSign,
+// // //         process.env.ESEWA_SECRET
+// // //       );
 
-// // //       paymentConfig = {
-// // //         url: process.env.ESEWA_PAYMENT_URL,
-// // //         data: { ...paymentData, signature },
-// // //         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-// // //         responseHandler: (response) => response.request?.res?.responseUrl,
-// // //       };
+// // //       const payment = await axios.post(
+// // //         process.env.ESEWA_PAYMENT_URL,
+// // //         qs.stringify(paymentData),
+// // //         {
+// // //           headers: { "Content-Type": "application/x-www-form-urlencoded" },
+// // //           maxRedirects: 0,
+// // //           validateStatus: (status) => status >= 200 && status < 400,
+// // //         }
+// // //       );
+
+// // //       const paymentUrl = payment.headers?.location || payment.request?.res?.responseUrl;
+
+// // //       if (!paymentUrl) throw new Error("Payment URL missing from eSewa");
+
+// // //       return res.json({ url: paymentUrl, transactionId: transaction._id });
 // // //     }
 
+// // //     // ===============================
+// // //     // KHALTI PAYMENT
+// // //     // ===============================
 // // //     if (paymentGateway === "khalti") {
-// // //       paymentConfig = {
-// // //         url: process.env.KHALTI_PAYMENT_URL,
-// // //         data: {
-// // //           amount: amount * 100,
+// // //       const payment = await axios.post(
+// // //         process.env.KHALTI_PAYMENT_URL,
+// // //         {
+// // //           amount: amount * 100, // paisa
 // // //           mobile: customerPhone,
-// // //           product_identity: productId,
-// // //           product_name: productName,
+// // //           product_identity: transaction._id.toString(),
+// // //           product_name: cartItems.map((i) => i.name).join(", "),
 // // //           return_url: process.env.SUCCESS_URL,
 // // //           failure_url: process.env.FAILURE_URL,
-// // //           public_key: process.env.KHALTI_PUBLIC_KEY,
+// // //           purchase_order_id: transaction._id.toString(),
+// // //           purchase_order_name: cartItems.map((i) => i.name).join(", "),
 // // //           website_url: "http://localhost:5173",
-// // //           purchase_order_id: productId,
-// // //           purchase_order_name: productName,
 // // //         },
-// // //         headers: {
-// // //           Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-// // //           "Content-Type": "application/json",
-// // //         },
-// // //         responseHandler: (response) => response.data?.payment_url,
-// // //       };
+// // //         {
+// // //           headers: {
+// // //             Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+// // //             "Content-Type": "application/json",
+// // //           },
+// // //         }
+// // //       );
+
+// // //       const paymentUrl = payment.data?.payment_url;
+// // //       if (!paymentUrl) throw new Error("Payment URL missing from Khalti");
+
+// // //       return res.json({ url: paymentUrl, transactionId: transaction._id });
 // // //     }
 
-// // //     // 2️⃣ CALL PAYMENT GATEWAY
-// // //     const payment = await axios.post(
-// // //       paymentConfig.url,
-// // //       paymentConfig.data,
-// // //       { headers: paymentConfig.headers }
-// // //     );
-
-// // //     const paymentUrl = paymentConfig.responseHandler(payment);
-
-// // //     if (!paymentUrl) {
-// // //       throw new Error("Payment URL missing from gateway");
-// // //     }
-
-// // //     return res.json({ url: paymentUrl });
+// // //     return res.status(400).json({ message: "Invalid payment gateway" });
 // // //   } catch (error) {
-// // //     console.error("❌ Payment init error:", error.message);
-
+// // //     console.error("❌ Payment initiation error:", error.message);
 // // //     return res.status(500).json({
 // // //       message: "Payment initiation failed",
 // // //       error: error.message,
@@ -108,239 +125,273 @@
 // // //   }
 // // // };
 
-
+// // // // ===============================
+// // // // PAYMENT STATUS CHECK
+// // // // ===============================
 // // // const paymentStatus = async (req, res) => {
-// // //   const { product_id, pidx, status } = req.body;
+// // //   const { transactionId, status, pidx } = req.body;
+
+// // //   // 1️⃣ Validate input
+// // //   if (!transactionId) {
+// // //     return res.status(400).json({ message: "transactionId is required" });
+// // //   }
+
 // // //   try {
-// // //     const transaction = await Transaction.findOne({
-// // //   product_id: String(product_id),
-// // // });
-
-// // //     if (!transaction) {
+// // //     const transaction = await Transaction.findById(transactionId);
+// // //     if (!transaction)
 // // //       return res.status(400).json({ message: "Transaction not found" });
-// // //     }
 
-// // //     const { payment_gateway } = transaction;
-
+// // //     // 2️⃣ Handle client-reported failure
 // // //     if (status === "FAILED") {
-// // //       await Transaction.updateOne(
-// // //         { product_id },
-// // //         { $set: { status: "FAILED", updatedAt: new Date() } }
-// // //       );
-
-// // //       return res.status(200).json({
-// // //         message: "Transaction status updated to FAILED",
+// // //       transaction.status = "FAILED";
+// // //       await transaction.save();
+// // //       return res.json({
+// // //         message: "FAILED",
 // // //         status: "FAILED",
+// // //         deliveryAddress: transaction.deliveryAddress,
 // // //       });
 // // //     }
 
-// // //     let paymentStatusCheck;
+// // //     // 3️⃣ ESEWA payment status check
+// // //     if (transaction.payment_gateway === "esewa") {
+// // //       const response = await axios.get(process.env.ESEWA_PAYMENT_STATUS_CHECK_URL, {
+// // //         params: {
+// // //           product_code: process.env.ESEWA_MERCHANT_ID,
+// // //           total_amount: transaction.amount,
+// // //           transaction_uuid: transaction._id.toString(),
+// // //         },
+// // //       });
 
-// // //     if (payment_gateway === "esewa") {
-// // //       const paymentData = {
-// // //         product_code: process.env.ESEWA_MERCHANT_ID,
-// // //         total_amount: transaction.amount,
-// // //         transaction_uuid: transaction.product_id,
-// // //       };
+// // //       if (response.data.status === "COMPLETE") {
+// // //         transaction.status = "COMPLETED";
+// // //         await transaction.save();
+// // //         return res.json({
+// // //           message: "COMPLETED",
+// // //           status: "COMPLETED",
+// // //           deliveryAddress: transaction.deliveryAddress,
+// // //         });
+// // //       }
+// // //     }
 
-// // //       const response = await axios.get(
-// // //         process.env.ESEWA_PAYMENT_STATUS_CHECK_URL,
-// // //         { params: paymentData }
+// // //     // 4️⃣ Khalti payment status check
+// // //     if (transaction.payment_gateway === "khalti") {
+// // //       if (!pidx) {
+// // //         return res
+// // //           .status(400)
+// // //           .json({ message: "pidx is required for Khalti verification" });
+// // //       }
+
+// // //       const response = await axios.post(
+// // //         process.env.KHALTI_VERIFICATION_URL,
+// // //         { pidx },
+// // //         {
+// // //           headers: {
+// // //             Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+// // //             "Content-Type": "application/json",
+// // //           },
+// // //         }
 // // //       );
 
-// // //       paymentStatusCheck = response.data;
-
-// // //       if (paymentStatusCheck.status === "COMPLETE") {
-// // //         await Transaction.updateOne(
-// // //           { product_id },
-// // //           { $set: { status: "COMPLETED", updatedAt: new Date() } }
-// // //         );
-
-// // //         return res.status(200).json({
-// // //           message: "Transaction status updated successfully",
+// // //       if (response.data.status === "Completed") {
+// // //         transaction.status = "COMPLETED";
+// // //         await transaction.save();
+// // //         return res.json({
+// // //           message: "COMPLETED",
 // // //           status: "COMPLETED",
-// // //         });
-// // //       } else {
-// // //         await Transaction.updateOne(
-// // //           { product_id },
-// // //           { $set: { status: "FAILED", updatedAt: new Date() } }
-// // //         );
-
-// // //         return res.status(200).json({
-// // //           message: "Transaction status updated to FAILED",
-// // //           status: "FAILED",
+// // //           deliveryAddress: transaction.deliveryAddress,
 // // //         });
 // // //       }
 // // //     }
 
-// // //     if (payment_gateway === "khalti") {
-// // //       try {
-// // //         const response = await axios.post(
-// // //           process.env.KHALTI_VERIFICATION_URL,
-// // //           { pidx },
-// // //           {
-// // //             headers: {
-// // //               Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-// // //               "Content-Type": "application/json",
-// // //             },
-// // //           }
-// // //         );
-
-// // //         paymentStatusCheck = response.data;
-// // //       } catch (error) {
-// // //         if (error.response?.status === 400) {
-// // //           paymentStatusCheck = error.response.data;
-// // //         } else {
-// // //           console.error(
-// // //             "Error verifying Khalti payment:",
-// // //             error.response?.data || error.message
-// // //           );
-// // //           throw error;
-// // //         }
-// // //       }
-
-// // //       if (paymentStatusCheck.status === "Completed") {
-// // //         await Transaction.updateOne(
-// // //           { product_id },
-// // //           { $set: { status: "COMPLETED", updatedAt: new Date() } }
-// // //         );
-
-// // //         return res.status(200).json({
-// // //           message: "Transaction status updated successfully",
-// // //           status: "COMPLETED",
-// // //         });
-// // //       } else {
-// // //         await Transaction.updateOne(
-// // //           { product_id },
-// // //           { $set: { status: "FAILED", updatedAt: new Date() } }
-// // //         );
-
-// // //         return res.status(200).json({
-// // //           message: "Transaction status updated to FAILED",
-// // //           status: "FAILED",
-// // //         });
-// // //       }
-// // //     }
-
-// // //     return res.status(400).json({ message: "Invalid payment gateway" });
-// // //   } catch (error) {
-// // //     console.error("Error during payment status check:", error);
-// // //     res.status(500).send({
+// // //     // 5️⃣ Fallback = FAILED
+// // //     transaction.status = "FAILED";
+// // //     await transaction.save();
+// // //     return res.json({
+// // //       message: "FAILED",
+// // //       status: "FAILED",
+// // //       deliveryAddress: transaction.deliveryAddress,
+// // //     });
+// // //   } catch (err) {
+// // //     console.error("❌ Payment status error:", err.message);
+// // //     return res.status(500).json({
 // // //       message: "Payment status check failed",
-// // //       error: error.response?.data || error.message,
+// // //       error: err.message,
 // // //     });
 // // //   }
 // // // };
 
-// // // // ✅ CommonJS export
+
 // // // module.exports = { initiatePayment, paymentStatus };
 
 
+// // // controllers/paymentController.js
 // // const Transaction = require("../models/paymentModel");
+// // const Product = require("../models/Product");
+// // const { User } = require("../models/User");
 // // const { generateHmacSha256Hash } = require("../utils/helper");
 // // const axios = require("axios");
+// // const qs = require("querystring"); // for eSewa
 
+// // // Helper: post-payment processing (deduct stock + clear purchased items from user's cart)
+// // async function postPaymentProcessing(transaction) {
+// //   try {
+// //     // If already processed, skip
+// //     if (transaction.stockUpdated) return;
+
+// //     const cartItems = transaction.cartItems || [];
+// //     if (!cartItems.length) return;
+
+// //     // 1) Decrease product stock for each item
+// //     for (const item of cartItems) {
+// //       const prodId = item.productId;
+// //       const qty = Number(item.quantity || 0);
+// //       if (!prodId || qty <= 0) continue;
+
+// //       const product = await Product.findById(prodId);
+// //       if (!product) {
+// //         console.warn(`Product not found while updating stock: ${prodId}`);
+// //         continue;
+// //       }
+
+// //       product.stock = Math.max(product.stock - qty, 0);
+// //       await product.save();
+// //     }
+
+// //     // 2) Remove purchased items from user's cart (only those product IDs)
+// //     const user = await User.findById(transaction.user);
+// //     if (user) {
+// //       const purchasedIds = new Set(cartItems.map((i) => i.productId.toString()));
+// //       user.cart = (user.cart || []).filter(
+// //         (ci) => !purchasedIds.has(ci.product.toString())
+// //       );
+// //       await user.save();
+// //     }
+
+// //     // 3) Mark transaction as processed for stock
+// //     transaction.stockUpdated = true;
+// //     await transaction.save();
+// //   } catch (err) {
+// //     console.error("Error in postPaymentProcessing:", err);
+// //     // do not throw — we don't want the caller to fail the HTTP response if this fails,
+// //     // but log it so you can inspect and retry if necessary.
+// //   }
+// // }
+
+// // // ===============================
+// // // INITIATE PAYMENT
+// // // ===============================
 // // const initiatePayment = async (req, res) => {
 // //   const {
 // //     amount,
-// //     productId,
+// //     cartItems,
 // //     paymentGateway,
 // //     customerName,
 // //     customerEmail,
 // //     customerPhone,
-// //     productName,
+// //     deliveryAddress,
 // //   } = req.body;
 
-// //   if (!paymentGateway || !productId) {
+// //   // ----------- VALIDATION -------------
+// //   if (!paymentGateway || !cartItems || !deliveryAddress) {
 // //     return res.status(400).json({ message: "Missing required fields" });
 // //   }
 
+// //   if (!cartItems.length) {
+// //     return res.status(400).json({ message: "Cart is empty" });
+// //   }
+
 // //   try {
-// //     // 1️⃣ SAVE TRANSACTION
+// //     // Save transaction in DB
 // //     const transaction = await Transaction.create({
+// //       user: req.user._id,
 // //       customerDetails: {
 // //         name: customerName,
 // //         email: customerEmail,
 // //         phone: customerPhone,
 // //       },
-// //       product_name: productName,
-// //       product_id: productId,
+// //       cartItems,
 // //       amount,
 // //       payment_gateway: paymentGateway,
 // //       status: "PENDING",
+// //       deliveryAddress,
 // //     });
 
-// //     console.log("✅ Transaction saved:", transaction._id);
+// //     console.log("✅ Transaction created:", transaction._id.toString());
 
-// //     let paymentConfig;
-
+// //     // ===============================
+// //     // ESEWA PAYMENT
+// //     // ===============================
 // //     if (paymentGateway === "esewa") {
 // //       const paymentData = {
-// //         amount,
-// //         failure_url: process.env.FAILURE_URL,
-// //         product_delivery_charge: "0",
-// //         product_service_charge: "0",
-// //         product_code: process.env.ESEWA_MERCHANT_ID,
-// //         signed_field_names: "total_amount,transaction_uuid,product_code",
-// //         success_url: process.env.SUCCESS_URL,
+// //         amount: amount.toString(),
 // //         tax_amount: "0",
-// //         total_amount: amount,
-// //         transaction_uuid: transaction._id.toString(), // ✅ UNIQUE ID
+// //         total_amount: amount.toString(),
+// //         transaction_uuid: transaction._id.toString(),
+// //         product_code: process.env.ESEWA_MERCHANT_ID,
+// //         product_service_charge: "0",
+// //         product_delivery_charge: "0",
+// //         success_url: process.env.SUCCESS_URL,
+// //         failure_url: process.env.FAILURE_URL,
+// //         signed_field_names: "total_amount,transaction_uuid,product_code",
 // //       };
 
-// //       const data = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
-// //       const signature = generateHmacSha256Hash(
-// //         data,
+// //       const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
+// //       paymentData.signature = generateHmacSha256Hash(
+// //         dataToSign,
 // //         process.env.ESEWA_SECRET
 // //       );
 
-// //       paymentConfig = {
-// //         url: process.env.ESEWA_PAYMENT_URL,
-// //         data: { ...paymentData, signature },
-// //         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-// //         responseHandler: (response) =>
-// //           response.request?.res?.responseUrl,
-// //       };
+// //       const payment = await axios.post(
+// //         process.env.ESEWA_PAYMENT_URL,
+// //         qs.stringify(paymentData),
+// //         {
+// //           headers: { "Content-Type": "application/x-www-form-urlencoded" },
+// //           maxRedirects: 0,
+// //           validateStatus: (status) => status >= 200 && status < 400,
+// //         }
+// //       );
+
+// //       const paymentUrl = payment.headers?.location || payment.request?.res?.responseUrl;
+
+// //       if (!paymentUrl) throw new Error("Payment URL missing from eSewa");
+
+// //       return res.json({ url: paymentUrl, transactionId: transaction._id });
 // //     }
 
+// //     // ===============================
+// //     // KHALTI PAYMENT
+// //     // ===============================
 // //     if (paymentGateway === "khalti") {
-// //       paymentConfig = {
-// //         url: process.env.KHALTI_PAYMENT_URL,
-// //         data: {
-// //           amount: amount * 100,
+// //       const payment = await axios.post(
+// //         process.env.KHALTI_PAYMENT_URL,
+// //         {
+// //           amount: amount * 100, // paisa
 // //           mobile: customerPhone,
 // //           product_identity: transaction._id.toString(),
-// //           product_name: productName,
+// //           product_name: cartItems.map((i) => i.name).join(", "),
 // //           return_url: process.env.SUCCESS_URL,
 // //           failure_url: process.env.FAILURE_URL,
-// //           public_key: process.env.KHALTI_PUBLIC_KEY,
-// //           website_url: "http://localhost:5173",
 // //           purchase_order_id: transaction._id.toString(),
-// //           purchase_order_name: productName,
+// //           purchase_order_name: cartItems.map((i) => i.name).join(", "),
+// //           website_url: "http://localhost:5173",
 // //         },
-// //         headers: {
-// //           Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-// //           "Content-Type": "application/json",
-// //         },
-// //         responseHandler: (response) => response.data?.payment_url,
-// //       };
+// //         {
+// //           headers: {
+// //             Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+// //             "Content-Type": "application/json",
+// //           },
+// //         }
+// //       );
+
+// //       const paymentUrl = payment.data?.payment_url;
+// //       if (!paymentUrl) throw new Error("Payment URL missing from Khalti");
+
+// //       return res.json({ url: paymentUrl, transactionId: transaction._id });
 // //     }
 
-// //     const payment = await axios.post(
-// //       paymentConfig.url,
-// //       paymentConfig.data,
-// //       { headers: paymentConfig.headers }
-// //     );
-
-// //     const paymentUrl = paymentConfig.responseHandler(payment);
-
-// //     if (!paymentUrl) {
-// //       throw new Error("Payment URL missing");
-// //     }
-
-// //     return res.json({ url: paymentUrl });
+// //     return res.status(400).json({ message: "Invalid payment gateway" });
 // //   } catch (error) {
-// //     console.error("❌ Payment error:", error.message);
+// //     console.error("❌ Payment initiation error:", error.message);
 // //     return res.status(500).json({
 // //       message: "Payment initiation failed",
 // //       error: error.message,
@@ -348,60 +399,67 @@
 // //   }
 // // };
 
+// // // ===============================
+// // // PAYMENT STATUS CHECK
+// // // ===============================
 // // const paymentStatus = async (req, res) => {
-// //   const { product_id, pidx, status } = req.body;
+// //   const { transactionId, status, pidx } = req.body;
+
+// //   // 1️⃣ Validate input
+// //   if (!transactionId) {
+// //     return res.status(400).json({ message: "transactionId is required" });
+// //   }
 
 // //   try {
-// //     const transaction = await Transaction.findOne({
-// //       product_id: String(product_id),
-// //     });
-
-// //     if (!transaction) {
+// //     const transaction = await Transaction.findById(transactionId);
+// //     if (!transaction)
 // //       return res.status(400).json({ message: "Transaction not found" });
-// //     }
 
-// //     const { payment_gateway } = transaction;
-
+// //     // 2️⃣ Handle client-reported failure
 // //     if (status === "FAILED") {
-// //       await Transaction.updateOne(
-// //         { product_id },
-// //         { $set: { status: "FAILED", updatedAt: new Date() } }
-// //       );
-
-// //       return res.status(200).json({
-// //         message: "Transaction status updated to FAILED",
+// //       transaction.status = "FAILED";
+// //       await transaction.save();
+// //       return res.json({
+// //         message: "FAILED",
 // //         status: "FAILED",
+// //         deliveryAddress: transaction.deliveryAddress,
 // //       });
 // //     }
 
-// //     // ----- ESEWA -----
-// //     if (payment_gateway === "esewa") {
-// //       const paymentData = {
-// //         product_code: process.env.ESEWA_MERCHANT_ID,
-// //         total_amount: transaction.amount,
-// //         transaction_uuid: transaction.product_id,
-// //       };
-
-// //       const response = await axios.get(
-// //         process.env.ESEWA_PAYMENT_STATUS_CHECK_URL,
-// //         { params: paymentData }
-// //       );
+// //     // 3️⃣ ESEWA payment status check
+// //     if (transaction.payment_gateway === "esewa") {
+// //       const response = await axios.get(process.env.ESEWA_PAYMENT_STATUS_CHECK_URL, {
+// //         params: {
+// //           product_code: process.env.ESEWA_MERCHANT_ID,
+// //           total_amount: transaction.amount,
+// //           transaction_uuid: transaction._id.toString(),
+// //         },
+// //       });
 
 // //       if (response.data.status === "COMPLETE") {
-// //         await Transaction.updateOne(
-// //           { product_id },
-// //           { $set: { status: "COMPLETED", updatedAt: new Date() } }
-// //         );
+// //         // mark completed and perform post-payment processing (stock update + clear cart)
+// //         transaction.status = "COMPLETED";
+// //         await transaction.save();
+
+// //         // post-payment processing (idempotent)
+// //         await postPaymentProcessing(transaction);
 
 // //         return res.json({
-// //           message: "Transaction COMPLETED",
+// //           message: "COMPLETED",
 // //           status: "COMPLETED",
+// //           deliveryAddress: transaction.deliveryAddress,
 // //         });
 // //       }
 // //     }
 
-// //     // ----- KHALTI -----
-// //     if (payment_gateway === "khalti") {
+// //     // 4️⃣ Khalti payment status check
+// //     if (transaction.payment_gateway === "khalti") {
+// //       if (!pidx) {
+// //         return res
+// //           .status(400)
+// //           .json({ message: "pidx is required for Khalti verification" });
+// //       }
+
 // //       const response = await axios.post(
 // //         process.env.KHALTI_VERIFICATION_URL,
 // //         { pidx },
@@ -414,30 +472,30 @@
 // //       );
 
 // //       if (response.data.status === "Completed") {
-// //         await Transaction.updateOne(
-// //           { product_id },
-// //           { $set: { status: "COMPLETED", updatedAt: new Date() } }
-// //         );
+// //         transaction.status = "COMPLETED";
+// //         await transaction.save();
+
+// //         // post-payment processing (idempotent)
+// //         await postPaymentProcessing(transaction);
 
 // //         return res.json({
-// //           message: "Transaction COMPLETED",
+// //           message: "COMPLETED",
 // //           status: "COMPLETED",
+// //           deliveryAddress: transaction.deliveryAddress,
 // //         });
 // //       }
 // //     }
 
-// //     // fallback
-// //     await Transaction.updateOne(
-// //       { product_id },
-// //       { $set: { status: "FAILED", updatedAt: new Date() } }
-// //     );
-
+// //     // 5️⃣ Fallback = FAILED
+// //     transaction.status = "FAILED";
+// //     await transaction.save();
 // //     return res.json({
-// //       message: "Transaction FAILED",
+// //       message: "FAILED",
 // //       status: "FAILED",
+// //       deliveryAddress: transaction.deliveryAddress,
 // //     });
 // //   } catch (err) {
-// //     console.error("Payment status error:", err);
+// //     console.error("❌ Payment status error:", err.message);
 // //     return res.status(500).json({
 // //       message: "Payment status check failed",
 // //       error: err.message,
@@ -445,265 +503,319 @@
 // //   }
 // // };
 
-
-// // module.exports = {
-// //   initiatePayment,
-// //   paymentStatus,
-// // };
+// // module.exports = { initiatePayment, paymentStatus };
 
 
 // const Transaction = require("../models/paymentModel");
+// const Product = require("../models/Product");
+// const { User } = require("../models/User");
 // const { generateHmacSha256Hash } = require("../utils/helper");
 // const axios = require("axios");
+// const qs = require("querystring"); // for eSewa
 
-// // ===== Initiate Payment =====
+// // ===============================
+// // HELPER: POST-PAYMENT PROCESSING
+// // Deduct stock and remove purchased items from user cart
+// // ===============================
+// async function postPaymentProcessing(transaction) {
+//   try {
+//     // Skip if already processed
+//     if (transaction.stockUpdated) return;
+
+//     const cartItems = transaction.cartItems || [];
+//     if (!cartItems.length) return;
+
+//     // 1️⃣ Deduct stock for each purchased product
+//     for (const item of cartItems) {
+//       const prodId = item.productId;
+//       const qty = Number(item.quantity || 0);
+//       if (!prodId || qty <= 0) continue;
+
+//       const product = await Product.findById(prodId);
+//       if (!product) {
+//         console.warn(`Product not found while updating stock: ${prodId}`);
+//         continue;
+//       }
+
+//       product.stock = Math.max(product.stock - qty, 0);
+//       await product.save();
+//     }
+
+//     // 2️⃣ Remove purchased items from user's cart
+//     const user = await User.findById(transaction.user);
+//     if (user) {
+//       const purchasedIds = new Set(cartItems.map((i) => i.productId.toString()));
+//       user.cart = (user.cart || []).filter(
+//         (ci) => !purchasedIds.has(ci.product.toString())
+//       );
+//       await user.save();
+//     }
+
+//     // 3️⃣ Mark transaction as processed for stock
+//     transaction.stockUpdated = true;
+//     await transaction.save();
+//   } catch (err) {
+//     console.error("Error in postPaymentProcessing:", err);
+//   }
+// }
+
+// // ===============================
+// // INITIATE PAYMENT
+// // ===============================
 // const initiatePayment = async (req, res) => {
 //   const {
 //     amount,
-//     productId,
+//     cartItems,
 //     paymentGateway,
 //     customerName,
 //     customerEmail,
 //     customerPhone,
-//     productName,
-//     deliveryAddress, // ✅ Added
+//     deliveryAddress,
 //   } = req.body;
 
-//   if (!paymentGateway || !productId || !deliveryAddress) {
+//   if (!paymentGateway || !cartItems || !deliveryAddress) {
 //     return res.status(400).json({ message: "Missing required fields" });
+//   }
+//   if (!cartItems.length) {
+//     return res.status(400).json({ message: "Cart is empty" });
 //   }
 
 //   try {
-//     // 1️⃣ Save transaction with delivery address
 //     const transaction = await Transaction.create({
-//       customerDetails: {
-//         name: customerName,
-//         email: customerEmail,
-//         phone: customerPhone,
-//       },
-//       product_name: productName,
-//       product_id: productId,
+//       user: req.user._id,
+//       customerDetails: { name: customerName, email: customerEmail, phone: customerPhone },
+//       cartItems,
 //       amount,
 //       payment_gateway: paymentGateway,
 //       status: "PENDING",
 //       deliveryAddress,
 //     });
 
-//     console.log("✅ Transaction saved:", transaction._id);
+//     console.log("✅ Transaction created:", transaction._id.toString());
 
-//     let paymentConfig;
-
-//     // ----- ESEWA -----
+//     // ===== ESEWA =====
 //     if (paymentGateway === "esewa") {
 //       const paymentData = {
-//         amount,
-//         failure_url: process.env.FAILURE_URL,
-//         product_delivery_charge: "0",
-//         product_service_charge: "0",
-//         product_code: process.env.ESEWA_MERCHANT_ID,
-//         signed_field_names: "total_amount,transaction_uuid,product_code",
-//         success_url: process.env.SUCCESS_URL,
+//         amount: amount.toString(),
 //         tax_amount: "0",
-//         total_amount: amount,
+//         total_amount: amount.toString(),
 //         transaction_uuid: transaction._id.toString(),
+//         product_code: process.env.ESEWA_MERCHANT_ID,
+//         product_service_charge: "0",
+//         product_delivery_charge: "0",
+//         success_url: process.env.SUCCESS_URL,
+//         failure_url: process.env.FAILURE_URL,
+//         signed_field_names: "total_amount,transaction_uuid,product_code",
 //       };
+//       const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
+//       paymentData.signature = generateHmacSha256Hash(dataToSign, process.env.ESEWA_SECRET);
 
-//       const data = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
-//       const signature = generateHmacSha256Hash(data, process.env.ESEWA_SECRET);
+//       const payment = await axios.post(
+//         process.env.ESEWA_PAYMENT_URL,
+//         qs.stringify(paymentData),
+//         { headers: { "Content-Type": "application/x-www-form-urlencoded" }, maxRedirects: 0, validateStatus: (status) => status >= 200 && status < 400 }
+//       );
 
-//       paymentConfig = {
-//         url: process.env.ESEWA_PAYMENT_URL,
-//         data: { ...paymentData, signature },
-//         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-//         responseHandler: (response) => response.request?.res?.responseUrl,
-//       };
+//       const paymentUrl = payment.headers?.location || payment.request?.res?.responseUrl;
+//       if (!paymentUrl) throw new Error("Payment URL missing from eSewa");
+
+//       return res.json({ url: paymentUrl, transactionId: transaction._id });
 //     }
 
-//     // ----- KHALTI -----
+//     // ===== KHALTI =====
 //     if (paymentGateway === "khalti") {
-//       paymentConfig = {
-//         url: process.env.KHALTI_PAYMENT_URL,
-//         data: {
+//       const payment = await axios.post(
+//         process.env.KHALTI_PAYMENT_URL,
+//         {
 //           amount: amount * 100,
 //           mobile: customerPhone,
 //           product_identity: transaction._id.toString(),
-//           product_name: productName,
+//           product_name: cartItems.map((i) => i.name).join(", "),
 //           return_url: process.env.SUCCESS_URL,
 //           failure_url: process.env.FAILURE_URL,
-//           public_key: process.env.KHALTI_PUBLIC_KEY,
-//           website_url: "http://localhost:5173",
 //           purchase_order_id: transaction._id.toString(),
-//           purchase_order_name: productName,
+//           purchase_order_name: cartItems.map((i) => i.name).join(", "),
+//           website_url: "http://localhost:5173",
 //         },
-//         headers: {
-//           Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-//           "Content-Type": "application/json",
-//         },
-//         responseHandler: (response) => response.data?.payment_url,
-//       };
+//         { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`, "Content-Type": "application/json" } }
+//       );
+
+//       const paymentUrl = payment.data?.payment_url;
+//       if (!paymentUrl) throw new Error("Payment URL missing from Khalti");
+
+//       return res.json({ url: paymentUrl, transactionId: transaction._id });
 //     }
 
-//     const payment = await axios.post(paymentConfig.url, paymentConfig.data, {
-//       headers: paymentConfig.headers,
-//     });
-
-//     const paymentUrl = paymentConfig.responseHandler(payment);
-
-//     if (!paymentUrl) {
-//       throw new Error("Payment URL missing");
-//     }
-
-//     return res.json({ url: paymentUrl, transactionId: transaction._id });
+//     return res.status(400).json({ message: "Invalid payment gateway" });
 //   } catch (error) {
-//     console.error("❌ Payment error:", error.message);
-//     return res.status(500).json({
-//       message: "Payment initiation failed",
-//       error: error.message,
-//     });
+//     console.error("❌ Payment initiation error:", error.message);
+//     return res.status(500).json({ message: "Payment initiation failed", error: error.message });
 //   }
 // };
 
-// // ===== Payment Status =====
+// // ===============================
+// // PAYMENT STATUS CHECK
+// // ===============================
 // const paymentStatus = async (req, res) => {
-//   const { product_id, pidx, status } = req.body;
+//   const { transactionId, status, pidx } = req.body;
+
+//   if (!transactionId) return res.status(400).json({ message: "transactionId is required" });
 
 //   try {
-//     const transaction = await Transaction.findOne({ product_id: String(product_id) });
+//     const transaction = await Transaction.findById(transactionId);
+//     if (!transaction) return res.status(400).json({ message: "Transaction not found" });
 
-//     if (!transaction) {
-//       return res.status(400).json({ message: "Transaction not found" });
-//     }
-
-//     const { payment_gateway } = transaction;
-
-//     // Handle failed status
+//     // Client-reported failure
 //     if (status === "FAILED") {
-//       await Transaction.updateOne(
-//         { product_id },
-//         { $set: { status: "FAILED", updatedAt: new Date() } }
-//       );
-
-//       return res.status(200).json({
-//         message: "Transaction status updated to FAILED",
-//         status: "FAILED",
-//         deliveryAddress: transaction.deliveryAddress, // ✅ Include address
-//       });
+//       transaction.status = "FAILED";
+//       await transaction.save();
+//       return res.json({ message: "FAILED", status: "FAILED", deliveryAddress: transaction.deliveryAddress });
 //     }
 
-//     // ----- ESEWA -----
-//     if (payment_gateway === "esewa") {
-//       const paymentData = {
-//         product_code: process.env.ESEWA_MERCHANT_ID,
-//         total_amount: transaction.amount,
-//         transaction_uuid: transaction.product_id,
-//       };
-
+//     // ===== ESEWA STATUS CHECK =====
+//     if (transaction.payment_gateway === "esewa") {
 //       const response = await axios.get(process.env.ESEWA_PAYMENT_STATUS_CHECK_URL, {
-//         params: paymentData,
+//         params: { product_code: process.env.ESEWA_MERCHANT_ID, total_amount: transaction.amount, transaction_uuid: transaction._id.toString() },
 //       });
 
 //       if (response.data.status === "COMPLETE") {
-//         await Transaction.updateOne(
-//           { product_id },
-//           { $set: { status: "COMPLETED", updatedAt: new Date() } }
-//         );
+//         transaction.status = "COMPLETED";
+//         await transaction.save();
 
-//         return res.json({
-//           message: "Transaction COMPLETED",
-//           status: "COMPLETED",
-//           deliveryAddress: transaction.deliveryAddress, // ✅ Include address
-//         });
+//         await postPaymentProcessing(transaction);
+
+//         return res.json({ message: "COMPLETED", status: "COMPLETED", deliveryAddress: transaction.deliveryAddress });
 //       }
 //     }
 
-//     // ----- KHALTI -----
-//     if (payment_gateway === "khalti") {
-//       const response = await axios.post(
-//         process.env.KHALTI_VERIFICATION_URL,
-//         { pidx },
-//         {
-//           headers: {
-//             Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-//             "Content-Type": "application/json",
-//           },
-//         }
-//       );
+//     // ===== KHALTI STATUS CHECK =====
+//     if (transaction.payment_gateway === "khalti") {
+//       if (!pidx) return res.status(400).json({ message: "pidx is required for Khalti verification" });
+
+//       const response = await axios.post(process.env.KHALTI_VERIFICATION_URL, { pidx }, { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`, "Content-Type": "application/json" } });
 
 //       if (response.data.status === "Completed") {
-//         await Transaction.updateOne(
-//           { product_id },
-//           { $set: { status: "COMPLETED", updatedAt: new Date() } }
-//         );
+//         transaction.status = "COMPLETED";
+//         await transaction.save();
 
-//         return res.json({
-//           message: "Transaction COMPLETED",
-//           status: "COMPLETED",
-//           deliveryAddress: transaction.deliveryAddress, // ✅ Include address
-//         });
+//         await postPaymentProcessing(transaction);
+
+//         return res.json({ message: "COMPLETED", status: "COMPLETED", deliveryAddress: transaction.deliveryAddress });
 //       }
 //     }
 
-//     // fallback
-//     await Transaction.updateOne(
-//       { product_id },
-//       { $set: { status: "FAILED", updatedAt: new Date() } }
-//     );
-
-//     return res.json({
-//       message: "Transaction FAILED",
-//       status: "FAILED",
-//       deliveryAddress: transaction.deliveryAddress, // ✅ Include address
-//     });
+//     // Fallback = FAILED
+//     transaction.status = "FAILED";
+//     await transaction.save();
+//     return res.json({ message: "FAILED", status: "FAILED", deliveryAddress: transaction.deliveryAddress });
 //   } catch (err) {
-//     console.error("Payment status error:", err);
-//     return res.status(500).json({
-//       message: "Payment status check failed",
-//       error: err.message,
-//     });
+//     console.error("❌ Payment status error:", err.message);
+//     return res.status(500).json({ message: "Payment status check failed", error: err.message });
 //   }
 // };
 
-// module.exports = {
-//   initiatePayment,
-//   paymentStatus,
-// };
+// module.exports = { initiatePayment, paymentStatus };
 
 
-
+// controllers/paymentController.js
 const Transaction = require("../models/paymentModel");
+const Product = require("../models/Product");
+const { User } = require("../models/User");
 const { generateHmacSha256Hash } = require("../utils/helper");
 const axios = require("axios");
-const qs = require("querystring"); // ✅ REQUIRED for eSewa form encoding
+const qs = require("querystring"); // for eSewa
+
+// ===============================
+// HELPER: POST-PAYMENT PROCESSING
+// - Deduct stock (using atomic updates where possible)
+// - Atomically remove purchased items from user's cart and push order into user's orders
+// - Mark transaction.stockUpdated to avoid double-processing
+// ===============================
+async function postPaymentProcessing(transaction) {
+  try {
+    if (transaction.stockUpdated) return;
+
+    const cartItems = transaction.cartItems || [];
+    if (!cartItems.length) return;
+
+    // 1) Deduct stock for each product (atomic $inc)
+    for (const item of cartItems) {
+      const prodId = item.productId;
+      const qty = Number(item.quantity || 0);
+      if (!prodId || qty <= 0) continue;
+
+      // Decrement by qty
+      await Product.findByIdAndUpdate(prodId, { $inc: { stock: -qty } });
+
+      // If stock goes negative, clamp to zero
+      await Product.updateOne({ _id: prodId, stock: { $lt: 0 } }, { $set: { stock: 0 } });
+    }
+
+    // 2) Build order payload to push into user's orders
+    const orderData = {
+      transactionId: transaction._id,
+      items: cartItems.map((item) => ({
+        product: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+      totalAmount: transaction.amount,
+      paymentGateway: transaction.payment_gateway,
+      status: "COMPLETED",
+      deliveryAddress: transaction.deliveryAddress,
+      purchasedAt: new Date(),
+    };
+
+    // 3) Atomically remove purchased items from cart and push order
+    const purchasedIds = cartItems.map((i) => i.productId);
+
+    await User.findByIdAndUpdate(
+      transaction.user,
+      {
+        // remove cart items whose 'product' is in purchasedIds
+        $pull: { cart: { product: { $in: purchasedIds } } },
+        // push new order
+        $push: { orders: orderData },
+      },
+      { new: true }
+    );
+
+    // 4) Mark transaction as processed
+    transaction.stockUpdated = true;
+    await transaction.save();
+  } catch (err) {
+    console.error("Error in postPaymentProcessing:", err);
+    // don't rethrow — we don't want to fail the response if post-processing has problems.
+  }
+}
 
 // ===============================
 // INITIATE PAYMENT
+// (same logic as before; creates Transaction and returns redirect URL + transactionId)
 // ===============================
 const initiatePayment = async (req, res) => {
   const {
     amount,
-    productId,
+    cartItems,
     paymentGateway,
     customerName,
     customerEmail,
     customerPhone,
-    productName,
     deliveryAddress,
   } = req.body;
 
-  if (!paymentGateway || !productId || !deliveryAddress) {
+  if (!paymentGateway || !cartItems || !deliveryAddress) {
     return res.status(400).json({ message: "Missing required fields" });
+  }
+  if (!cartItems.length) {
+    return res.status(400).json({ message: "Cart is empty" });
   }
 
   try {
-    // 1️⃣ Save transaction in DB
     const transaction = await Transaction.create({
-      customerDetails: {
-        name: customerName,
-        email: customerEmail,
-        phone: customerPhone,
-      },
-      product_name: productName,
-      product_id: productId,
+      user: req.user._id,
+      customerDetails: { name: customerName, email: customerEmail, phone: customerPhone },
+      cartItems,
       amount,
       payment_gateway: paymentGateway,
       status: "PENDING",
@@ -712,210 +824,128 @@ const initiatePayment = async (req, res) => {
 
     console.log("✅ Transaction created:", transaction._id.toString());
 
-    // ===============================
-    // ESEWA PAYMENT
-    // ===============================
-// ===============================
-// ESEWA PAYMENT (V2 - SIGNED)
-// ===============================
-if (paymentGateway === "esewa") {
-  const paymentData = {
-    amount: amount.toString(),
-    tax_amount: "0",
-    total_amount: amount.toString(),
-    transaction_uuid: transaction._id.toString(),
-    product_code: process.env.ESEWA_MERCHANT_ID,
-    product_service_charge: "0",
-    product_delivery_charge: "0",
-    success_url: process.env.SUCCESS_URL,
-    failure_url: process.env.FAILURE_URL,
-    signed_field_names: "total_amount,transaction_uuid,product_code",
-  };
+    // ESEWA
+    if (paymentGateway === "esewa") {
+      const paymentData = {
+        amount: amount.toString(),
+        tax_amount: "0",
+        total_amount: amount.toString(),
+        transaction_uuid: transaction._id.toString(),
+        product_code: process.env.ESEWA_MERCHANT_ID,
+        product_service_charge: "0",
+        product_delivery_charge: "0",
+        success_url: process.env.SUCCESS_URL,
+        failure_url: process.env.FAILURE_URL,
+        signed_field_names: "total_amount,transaction_uuid,product_code",
+      };
+      const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
+      paymentData.signature = generateHmacSha256Hash(dataToSign, process.env.ESEWA_SECRET);
 
-  // Create signature
-  const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
-  const signature = generateHmacSha256Hash(
-    dataToSign,
-    process.env.ESEWA_SECRET
-  );
+      const payment = await axios.post(
+        process.env.ESEWA_PAYMENT_URL,
+        qs.stringify(paymentData),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" }, maxRedirects: 0, validateStatus: (status) => status >= 200 && status < 400 }
+      );
 
-  paymentData.signature = signature;
+      const paymentUrl = payment.headers?.location || payment.request?.res?.responseUrl;
+      if (!paymentUrl) throw new Error("Payment URL missing from eSewa");
 
-  const payment = await axios.post(
-    process.env.ESEWA_PAYMENT_URL,
-    qs.stringify(paymentData),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      maxRedirects: 0,
-      validateStatus: (status) => status >= 200 && status < 400,
+      return res.json({ url: paymentUrl, transactionId: transaction._id });
     }
-  );
 
-  const paymentUrl =
-    payment.headers?.location ||
-    payment.request?.res?.responseUrl;
-
-  if (!paymentUrl) {
-    throw new Error("Payment URL missing from eSewa response");
-  }
-
-  return res.json({
-    url: paymentUrl,
-    transactionId: transaction._id,
-  });
-}
-
-
-    // ===============================
-    // KHALTI PAYMENT
-    // ===============================
+    // KHALTI
     if (paymentGateway === "khalti") {
       const payment = await axios.post(
         process.env.KHALTI_PAYMENT_URL,
         {
-          amount: amount * 100, // paisa
+          amount: amount * 100,
           mobile: customerPhone,
           product_identity: transaction._id.toString(),
-          product_name: productName,
+          product_name: cartItems.map((i) => i.name).join(", "),
           return_url: process.env.SUCCESS_URL,
           failure_url: process.env.FAILURE_URL,
           purchase_order_id: transaction._id.toString(),
-          purchase_order_name: productName,
+          purchase_order_name: cartItems.map((i) => i.name).join(", "),
           website_url: "http://localhost:5173",
         },
-        {
-          headers: {
-            Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
+        { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`, "Content-Type": "application/json" } }
       );
 
       const paymentUrl = payment.data?.payment_url;
+      if (!paymentUrl) throw new Error("Payment URL missing from Khalti");
 
-      if (!paymentUrl) {
-        throw new Error("Payment URL missing from Khalti response");
-      }
-
-      return res.json({
-        url: paymentUrl,
-        transactionId: transaction._id,
-      });
+      return res.json({ url: paymentUrl, transactionId: transaction._id });
     }
 
     return res.status(400).json({ message: "Invalid payment gateway" });
   } catch (error) {
     console.error("❌ Payment initiation error:", error.message);
-    return res.status(500).json({
-      message: "Payment initiation failed",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "Payment initiation failed", error: error.message });
   }
 };
 
 // ===============================
 // PAYMENT STATUS CHECK
+// - verifies with provider and triggers postPaymentProcessing when COMPLETED
 // ===============================
 const paymentStatus = async (req, res) => {
-  const { product_id, pidx, status } = req.body;
+  const { transactionId, status, pidx } = req.body;
+
+  if (!transactionId) return res.status(400).json({ message: "transactionId is required" });
 
   try {
-    // Find transaction by MongoDB ID
-    const transaction = await Transaction.findById(product_id);
+    const transaction = await Transaction.findById(transactionId);
+    if (!transaction) return res.status(400).json({ message: "Transaction not found" });
 
-    if (!transaction) {
-      return res.status(400).json({ message: "Transaction not found" });
-    }
-
-    // Client says failed
+    // Client-reported failure
     if (status === "FAILED") {
       transaction.status = "FAILED";
       await transaction.save();
-
-      return res.json({
-        message: "FAILED",
-        status: "FAILED",
-        deliveryAddress: transaction.deliveryAddress,
-      });
+      return res.json({ message: "FAILED", status: "FAILED", deliveryAddress: transaction.deliveryAddress });
     }
 
-    // ===============================
-    // ESEWA STATUS CHECK
-    // ===============================
+    // ESEWA status check
     if (transaction.payment_gateway === "esewa") {
-      const response = await axios.get(
-        process.env.ESEWA_PAYMENT_STATUS_CHECK_URL,
-        {
-          params: {
-            product_code: process.env.ESEWA_MERCHANT_ID,
-            total_amount: transaction.amount,
-            transaction_uuid: transaction._id.toString(),
-          },
-        }
-      );
+      const response = await axios.get(process.env.ESEWA_PAYMENT_STATUS_CHECK_URL, {
+        params: { product_code: process.env.ESEWA_MERCHANT_ID, total_amount: transaction.amount, transaction_uuid: transaction._id.toString() },
+      });
 
       if (response.data.status === "COMPLETE") {
         transaction.status = "COMPLETED";
         await transaction.save();
 
-        return res.json({
-          message: "COMPLETED",
-          status: "COMPLETED",
-          deliveryAddress: transaction.deliveryAddress,
-        });
+        // post-processing: stock decrement + cart clear + add order
+        await postPaymentProcessing(transaction);
+
+        return res.json({ message: "COMPLETED", status: "COMPLETED", deliveryAddress: transaction.deliveryAddress });
       }
     }
 
-    // ===============================
-    // KHALTI STATUS CHECK
-    // ===============================
+    // Khalti verification
     if (transaction.payment_gateway === "khalti") {
-      const response = await axios.post(
-        process.env.KHALTI_VERIFICATION_URL,
-        { pidx },
-        {
-          headers: {
-            Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      if (!pidx) return res.status(400).json({ message: "pidx is required for Khalti verification" });
+
+      const response = await axios.post(process.env.KHALTI_VERIFICATION_URL, { pidx }, { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`, "Content-Type": "application/json" } });
 
       if (response.data.status === "Completed") {
         transaction.status = "COMPLETED";
         await transaction.save();
 
-        return res.json({
-          message: "COMPLETED",
-          status: "COMPLETED",
-          deliveryAddress: transaction.deliveryAddress,
-        });
+        // post-processing
+        await postPaymentProcessing(transaction);
+
+        return res.json({ message: "COMPLETED", status: "COMPLETED", deliveryAddress: transaction.deliveryAddress });
       }
     }
 
-    // ===============================
-    // FALLBACK = FAILED
-    // ===============================
+    // fallback
     transaction.status = "FAILED";
     await transaction.save();
-
-    return res.json({
-      message: "FAILED",
-      status: "FAILED",
-      deliveryAddress: transaction.deliveryAddress,
-    });
+    return res.json({ message: "FAILED", status: "FAILED", deliveryAddress: transaction.deliveryAddress });
   } catch (err) {
     console.error("❌ Payment status error:", err.message);
-    return res.status(500).json({
-      message: "Payment status check failed",
-      error: err.message,
-    });
+    return res.status(500).json({ message: "Payment status check failed", error: err.message });
   }
 };
 
-module.exports = {
-  initiatePayment,
-  paymentStatus,
-};
+module.exports = { initiatePayment, paymentStatus };

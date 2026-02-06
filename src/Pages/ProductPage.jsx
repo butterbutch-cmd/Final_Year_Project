@@ -1,5 +1,5 @@
 // import { useEffect, useState } from "react";
-// import { useParams } from "react-router-dom";
+// import { useParams, useNavigate } from "react-router-dom";
 // import { getProductById } from "../services/publicAPI";
 // import Header from "../Components/Header/Header";
 // import ProductSection from "../Components/ProductSection";
@@ -12,7 +12,6 @@
 // import PurchaseActions from "../Components/ProductDetailPageComponent/PurchaseActions";
 // import Accordion from "../Components/ProductDetailPageComponent/Accordion";
 
-// // Optional: fetch user's wishlist from backend
 // const getUserWishlist = async () => {
 //   const token = localStorage.getItem("token");
 //   if (!token) return [];
@@ -26,6 +25,8 @@
 
 // const ProductPage = () => {
 //   const { id } = useParams();
+//   const navigate = useNavigate();
+
 //   const [product, setProduct] = useState(null);
 //   const [selectedImage, setSelectedImage] = useState("");
 //   const [quantity, setQuantity] = useState(1);
@@ -38,7 +39,7 @@
 //         setProduct(data);
 //         setSelectedImage(data.image1 || data.image2 || data.image3 || "");
 //       })
-//       .catch((err) => console.error(err));
+//       .catch(console.error);
 
 //     getUserWishlist().then(setWishlist);
 //   }, [id]);
@@ -54,18 +55,44 @@
 //     );
 //   }
 
-//   // ---------------------------
-//   // Calculate total price dynamically
-//   // ---------------------------
 //   const potPrice = selectedPot === "ceramic" ? 250 : 0;
-//   const totalPrice = (product.price + potPrice) * quantity;
+//   const unitPrice = product.price + potPrice;
+//   const totalPrice = unitPrice * quantity;
 
-//   // ---------------------------
-//   // Wishlist toggle handler
-//   // ---------------------------
+//   /* ================= ADD TO CART ================= */
+//   const handleAddToCart = async () => {
+//     const token = localStorage.getItem("token");
+//     if (!token) {
+//       alert("Please login first");
+//       return;
+//     }
+
+//     try {
+//       const res = await fetch("http://localhost:5000/api/user/cart", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${token}`,
+//         },
+//         body: JSON.stringify({
+//           productId: product._id,
+//           quantity,
+//           price: unitPrice, // snapshot unit price
+//         }),
+//       });
+
+//       const data = await res.json();
+//       if (!res.ok) throw new Error(data.message);
+
+//       navigate("/checkout");
+//     } catch (err) {
+//       console.error("Add to cart error:", err);
+//       alert("Failed to add item to cart");
+//     }
+//   };
+
+//   /* ================= WISHLIST ================= */
 //   const handleToggleWishlist = async (productId) => {
-//     if (!productId) return alert("Product ID missing!");
-
 //     try {
 //       const token = localStorage.getItem("token");
 //       if (!token) return alert("Login first!");
@@ -81,25 +108,22 @@
 //         }
 //       );
 
-//       if (!res.ok) throw new Error("Failed to update wishlist");
-
 //       const data = await res.json();
-//       setWishlist(data.wishlist); // update local state
+//       setWishlist(data.wishlist);
 //     } catch (err) {
-//       console.error("Error toggling wishlist:", err);
+//       console.error("Wishlist error:", err);
 //     }
 //   };
 
 //   return (
 //     <>
 //       <Header />
-//       <main className="flex-grow w-full max-w-[1440px] mx-auto px-[15px] py-8 lg:py-16">
-//         <div className="mb-6">
-//           <Breadcrumb category={product.category} productName={product.name} />
-//         </div>
 
-//         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
-//           <div className="lg:col-span-7 flex flex-col gap-6">
+//       <main className="flex-grow w-full max-w-[1440px] mx-auto px-[15px] py-8 lg:py-16">
+//         <Breadcrumb category={product.category} productName={product.name} />
+
+//         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 mt-6">
+//           <div className="lg:col-span-7">
 //             <ImageGallery
 //               image1={product.image1 || ""}
 //               image2={product.image2 || ""}
@@ -111,17 +135,17 @@
 //             />
 //           </div>
 
-//           <div className="lg:col-span-5 relative">
+//           <div className="lg:col-span-5">
 //             <div className="lg:sticky lg:top-28 flex flex-col gap-8">
 //               <ProductHeader
 //                 name={product.name}
 //                 price={product.price}
 //                 oldPrice={product.oldPrice}
-//                 totalPrice={totalPrice} // pass total price here if needed
+//                 totalPrice={totalPrice}
 //                 stock={product.stock}
 //               />
 
-//               <p className="text-base text-gray-600 leading-relaxed">
+//               <p className="text-base text-gray-600">
 //                 {product.description || "No description available."}
 //               </p>
 
@@ -133,21 +157,17 @@
 //                 potOptions={product.potOptions}
 //               />
 
-//               <div className="flex gap-4 pt-2 items-center">
+//               <div className="flex gap-4 items-center">
 //                 <QuantityStepper
 //                   quantity={quantity}
 //                   setQuantity={setQuantity}
 //                 />
 
-//                 {/* Pass totalPrice to PurchaseActions */}
 //                 <PurchaseActions
 //                   product={product}
 //                   wishlist={wishlist}
 //                   totalPrice={totalPrice}
-//                   onAddToCart={() => {
-//                     console.log("Add to cart:", { productId: product._id, quantity, selectedPot, totalPrice });
-//                     alert(`Added ${quantity} item(s) to cart for Rs ${totalPrice} (demo).`);
-//                   }}
+//                   onAddToCart={handleAddToCart}
 //                   onToggleWishlist={handleToggleWishlist}
 //                 />
 //               </div>
@@ -157,25 +177,19 @@
 //                   {
 //                     id: "care",
 //                     title: "Plant Care Tips",
-//                     content: product.care?.tips || [
-//                       "Water every 1-2 weeks, allowing soil to dry between waterings.",
-//                       "Expect to water more often in brighter light.",
-//                       "Mist occasionally to increase humidity.",
-//                     ],
+//                     content:
+//                       product.care?.tips || [
+//                         "Water every 1-2 weeks",
+//                         "Bright indirect light",
+//                         "Mist occasionally",
+//                       ],
 //                   },
 //                   {
 //                     id: "shipping",
 //                     title: "Shipping & Returns",
 //                     content:
 //                       product.policies?.shipping ||
-//                       "We ship all plants in custom engineered packaging to ensure they arrive safely. If your plant arrives damaged, we'll replace it free of charge within 30 days.",
-//                   },
-//                   {
-//                     id: "sustainability",
-//                     title: "Sustainability Promise",
-//                     content:
-//                       product.policies?.sustainability ||
-//                       "Our pots are made from recycled materials and our packaging is plastic-free and biodegradable.",
+//                       "Free replacement within 30 days if damaged.",
 //                   },
 //                 ]}
 //               />
@@ -183,6 +197,7 @@
 //           </div>
 //         </div>
 //       </main>
+
 //       <ProductSection title="Customer Also Enjoy" filterKey="trending" />
 //     </>
 //   );
@@ -232,6 +247,8 @@ const ProductPage = () => {
       .then((data) => {
         setProduct(data);
         setSelectedImage(data.image1 || data.image2 || data.image3 || "");
+        // Ensure quantity never exceeds stock on load
+        setQuantity(data.stock > 0 ? 1 : 0);
       })
       .catch(console.error);
 
@@ -250,8 +267,52 @@ const ProductPage = () => {
   }
 
   const potPrice = selectedPot === "ceramic" ? 250 : 0;
-  const totalPrice = (product.price + potPrice) * quantity;
+  const unitPrice = product.price + potPrice;
+  const totalPrice = unitPrice * quantity;
 
+  /* ================= LOW STOCK / OUT OF STOCK ================= */
+  const isLowStock = product.stock > 0 && product.stock < 5;
+  const isOutOfStock = product.stock === 0;
+
+  /* ================= ADD TO CART ================= */
+  const handleAddToCart = async () => {
+    if (isOutOfStock) return; // prevent adding if out of stock
+    if (quantity > product.stock) {
+      alert(`Only ${product.stock} items available in stock.`);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please login first");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/user/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: product._id,
+          quantity,
+          price: unitPrice,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      navigate("/checkout");
+    } catch (err) {
+      console.error("Add to cart error:", err);
+      alert("Failed to add item to cart");
+    }
+  };
+
+  /* ================= WISHLIST ================= */
   const handleToggleWishlist = async (productId) => {
     try {
       const token = localStorage.getItem("token");
@@ -275,15 +336,25 @@ const ProductPage = () => {
     }
   };
 
+  /* ================= QUANTITY LIMIT HANDLER ================= */
+  const handleQuantityChange = (newQuantity) => {
+    if (newQuantity > product.stock) {
+      setQuantity(product.stock); // limit to available stock
+    } else if (newQuantity < 1) {
+      setQuantity(1); // minimum 1
+    } else {
+      setQuantity(newQuantity);
+    }
+  };
+
   return (
     <>
       <Header />
-      <main className="flex-grow w-full max-w-[1440px] mx-auto px-[15px] py-8 lg:py-16">
-        <div className="mb-6">
-          <Breadcrumb category={product.category} productName={product.name} />
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+      <main className="flex-grow w-full max-w-[1440px] mx-auto px-[15px] py-8 lg:py-16">
+        <Breadcrumb category={product.category} productName={product.name} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 mt-6">
           <div className="lg:col-span-7">
             <ImageGallery
               image1={product.image1 || ""}
@@ -318,29 +389,35 @@ const ProductPage = () => {
                 potOptions={product.potOptions}
               />
 
-              <div className="flex gap-4 pt-2 items-center">
-                <QuantityStepper
-                  quantity={quantity}
-                  setQuantity={setQuantity}
-                />
+              {/* ================= QUANTITY & ADD TO CART ================= */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-4 items-center">
+                  <QuantityStepper
+                    quantity={quantity}
+                    setQuantity={handleQuantityChange} // enforce stock limits
+                  />
 
-                <PurchaseActions
-                  product={product}
-                  wishlist={wishlist}
-                  totalPrice={totalPrice}
-                  onAddToCart={() => {
-                    navigate("/checkout", {
-                      state: {
-                        productId: product._id,
-                        productName: product.name,
-                        amount: totalPrice,
-                        quantity,
-                        selectedPot,
-                      },
-                    });
-                  }}
-                  onToggleWishlist={handleToggleWishlist}
-                />
+                  <PurchaseActions
+                    product={product}
+                    wishlist={wishlist}
+                    totalPrice={totalPrice}
+                    onAddToCart={handleAddToCart}
+                    onToggleWishlist={handleToggleWishlist}
+                    disabled={isOutOfStock} // disable button if stock = 0
+                  />
+                </div>
+
+                {/* Low stock warning */}
+                {isLowStock && (
+                  <p className="text-red-600 font-semibold">
+                    Hurry! Only {product.stock} left in stock.
+                  </p>
+                )}
+
+                {/* Out of stock message */}
+                {isOutOfStock && (
+                  <p className="text-gray-500 font-semibold">Out of stock</p>
+                )}
               </div>
 
               <Accordion

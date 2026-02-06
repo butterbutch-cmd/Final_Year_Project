@@ -1,147 +1,4 @@
-// //file: Final_Year_Project/Backend/routes/Users.js
-// const router = require("express").Router();
-// const { User, validateUserSignup } = require("../models/User");
-// const bcrypt = require("bcrypt");
-// const sendEmail = require("../utils/sendEmail");
-
-// const authenticate = require("../middleware/authenticate");
-
-// // ================= PERMISSION MIDDLEWARE =================
-// const checkPermission = (action) => {
-//   return (req, res, next) => {
-//     const perms = req.user.permissions?.users;
-
-//     if (!perms || perms[action] !== true) {
-//       return res.status(403).json({
-//         message: "Access denied: insufficient permissions",
-//       });
-//     }
-//     next();
-//   };
-// };
-
-// // ---------------- CREATE USER ----------------
-// router.post("/", async (req, res) => {
-//   try {
-//     const { error } = validateUserSignup(req.body);
-//     if (error)
-//       return res.status(400).send({ message: error.details[0].message });
-
-//     const existingUser = await User.findOne({ email: req.body.email });
-//     if (existingUser)
-//       return res.status(409).send({ message: "Email already exists" });
-
-//     const salt = await bcrypt.genSalt(10);
-//     const hashPassword = await bcrypt.hash(req.body.password, salt);
-
-//     await new User({
-//       username: req.body.username,
-//       email: req.body.email,
-//       password: hashPassword,
-//       authProvider: "local",
-//     }).save();
-
-//     res.status(201).send({ message: "User created successfully" });
-//   } catch (err) {
-//     console.error("Create user error:", err);
-//     res.status(500).send({ message: "Internal Server Error" });
-//   }
-// });
-
-// // ---------------- GET ALL USERS ----------------
-// router.get(
-//   "/",
-//   authenticate,
-//   checkPermission("view"),
-//   async (req, res) => {
-//     try {
-//       const users = await User.find().sort({ createdAt: -1 });
-//       res.json(users);
-//     } catch (err) {
-//       console.error("Get users error:", err);
-//       res.status(500).json({ message: "Server error" });
-//     }
-//   }
-// );
-
-// // ---------------- UPDATE USER (BLOCK / UNBLOCK) ----------------
-// router.put(
-//   "/:id",
-//   authenticate,
-//   checkPermission("edit"),
-//   async (req, res) => {
-//     try {
-//       const { id } = req.params;
-//       const { isBlocked, blockReason, ...otherFields } = req.body;
-
-//       const updateData = { ...otherFields };
-
-//       if (typeof isBlocked === "boolean") {
-//         updateData.isBlocked = isBlocked;
-//         if (isBlocked) updateData.blockReason = blockReason || "";
-//       }
-
-//       const user = await User.findByIdAndUpdate(id, updateData, {
-//         new: true,
-//       });
-
-//       if (!user) return res.status(404).json({ message: "User not found" });
-
-//       // Send emails
-//       if (isBlocked && blockReason) {
-//         await sendEmail(
-//           user.email,
-//           "Account Blocked",
-//           `
-//           <p>Hi ${user.username},</p>
-//           <p>Your account has been <strong>blocked</strong>.</p>
-//           <p>Reason: ${blockReason}</p>
-//           `
-//         );
-//       } else if (!isBlocked) {
-//         await sendEmail(
-//           user.email,
-//           "Account Unblocked",
-//           `
-//           <p>Hi ${user.username},</p>
-//           <p>Your account has been <strong>unblocked</strong>.</p>
-//           `
-//         );
-//       }
-
-//       res.json({ message: "User updated successfully", user });
-//     } catch (err) {
-//       console.error("Update user error:", err);
-//       res.status(500).json({ message: "Server error" });
-//     }
-//   }
-// );
-
-// // ---------------- DELETE USER ----------------
-// router.delete(
-//   "/:id",
-//   authenticate,
-//   checkPermission("delete"),
-//   async (req, res) => {
-//     try {
-//       const { id } = req.params;
-
-//       const deletedUser = await User.findByIdAndDelete(id);
-//       if (!deletedUser)
-//         return res.status(404).json({ message: "User not found" });
-
-//       res.json({ message: "User deleted successfully" });
-//     } catch (err) {
-//       console.error("Delete user error:", err);
-//       res.status(500).json({ message: "Server error" });
-//     }
-//   }
-// );
-
-// module.exports = router;
-
-
-
+///file location: Final_Year_Project/Backend/routes/Users.js
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { User, validateUserSignup } = require("../models/User");
@@ -281,5 +138,123 @@ router.get("/", authenticate, checkPermission("users", "view"), async (req, res)
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// -----------------------
+// BLOCK / UNBLOCK USER (ADMIN ONLY)
+// -----------------------
+router.put(
+  "/:id/block",
+  authenticate,
+  checkPermission("users", "edit"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isBlocked, blockReason } = req.body;
+
+      if (typeof isBlocked !== "boolean") {
+        return res.status(400).json({ message: "isBlocked must be boolean" });
+      }
+
+      const user = await User.findById(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Safety: do not block admins / staff
+      if (user.role !== "user") {
+        return res.status(403).json({
+          message: "You cannot block admin or staff accounts",
+        });
+      }
+
+      const wasBlocked = user.isBlocked; // 👈 track previous state
+
+      user.isBlocked = isBlocked;
+      user.blockReason = isBlocked
+        ? blockReason || "Violation of platform policies"
+        : "";
+
+      await user.save();
+
+      /* ===============================
+         EMAIL: USER BLOCKED
+      ================================ */
+      if (!wasBlocked && isBlocked) {
+        await sendEmail(
+          user.email,
+          "Your FloraVerse Account Has Been Blocked",
+          `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2 style="color:#d32f2f;">Account Block Notification</h2>
+
+            <p>Dear <b>${user.username}</b>,</p>
+
+            <p>Your FloraVerse account has been <b>temporarily blocked</b> for the following reason:</p>
+
+            <blockquote style="background:#f8f8f8; padding:10px; border-left:4px solid #d32f2f;">
+              ${user.blockReason}
+            </blockquote>
+
+            <p>If you believe this was a mistake, please contact our support team:</p>
+
+            <p>
+              📧 <a href="mailto:support@floraverse.com">support@floraverse.com</a>
+            </p>
+
+            <p>— FloraVerse Team</p>
+          </div>
+          `
+        );
+      }
+
+      /* ===============================
+         EMAIL: USER UNBLOCKED ✅
+      ================================ */
+      if (wasBlocked && !isBlocked) {
+        await sendEmail(
+          user.email,
+          "Your FloraVerse Account Has Been Restored",
+          `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2 style="color:#2e7d32;">Account Reactivated</h2>
+
+            <p>Dear <b>${user.username}</b>,</p>
+
+            <p>Good news! 🎉</p>
+
+            <p>Your FloraVerse account has been <b>successfully unblocked</b>. You now have full access to the platform again.</p>
+
+            <p>Please make sure to follow our community guidelines to avoid future restrictions.</p>
+
+            <p>If you have any questions, feel free to contact us:</p>
+
+            <p>
+              📧 <a href="mailto:support@floraverse.com">support@floraverse.com</a>
+            </p>
+
+            <p>Welcome back 🌱<br/>
+            <b>FloraVerse Team</b></p>
+          </div>
+          `
+        );
+      }
+
+      res.json({
+        message: isBlocked
+          ? "User blocked successfully and email sent"
+          : "User unblocked successfully and email sent",
+        user: {
+          _id: user._id,
+          isBlocked: user.isBlocked,
+          blockReason: user.blockReason,
+        },
+      });
+    } catch (err) {
+      console.error("Block user error:", err);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  }
+);
+
 
 module.exports = router;

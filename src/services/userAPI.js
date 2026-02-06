@@ -1,5 +1,10 @@
+// Final_Year_Project/Frontend/services/userAPI.js
+
 const BASE_URL = "http://localhost:5000";
 
+/* ===============================
+   AUTH TOKEN
+================================ */
 const getToken = () => {
   return localStorage.getItem("adminToken");
 };
@@ -8,7 +13,9 @@ const authHeader = () => ({
   Authorization: `Bearer ${getToken()}`,
 });
 
-// ================= GET USERS =================
+/* ===============================
+   GET ALL USERS (ADMIN)
+================================ */
 export const getUsers = async () => {
   const res = await fetch(`${BASE_URL}/api/users`, {
     headers: authHeader(),
@@ -22,9 +29,12 @@ export const getUsers = async () => {
   return res.json();
 };
 
-// ================= BLOCK USER =================
+/* ===============================
+   BLOCK USER (ADMIN)
+   Route: PUT /api/users/:id/block
+================================ */
 export const blockUser = async (id, reason) => {
-  const res = await fetch(`${BASE_URL}/api/users/${id}`, {
+  const res = await fetch(`${BASE_URL}/api/users/${id}/block`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -44,9 +54,12 @@ export const blockUser = async (id, reason) => {
   return res.json();
 };
 
-// ================= UNBLOCK USER =================
+/* ===============================
+   UNBLOCK USER (ADMIN)
+   Route: PUT /api/users/:id/block
+================================ */
 export const unblockUser = async (id) => {
-  const res = await fetch(`${BASE_URL}/api/users/${id}`, {
+  const res = await fetch(`${BASE_URL}/api/users/${id}/block`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -54,6 +67,7 @@ export const unblockUser = async (id) => {
     },
     body: JSON.stringify({
       isBlocked: false,
+      blockReason: "",
     }),
   });
 
@@ -65,7 +79,10 @@ export const unblockUser = async (id) => {
   return res.json();
 };
 
-// ================= DELETE USER =================
+/* ===============================
+   DELETE USER (ADMIN)
+   Route: DELETE /api/users/:id
+================================ */
 export const deleteUser = async (id) => {
   const res = await fetch(`${BASE_URL}/api/users/${id}`, {
     method: "DELETE",
