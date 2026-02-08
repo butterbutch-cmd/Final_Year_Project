@@ -13,12 +13,16 @@ const adminProducts = require("./routes/adminProducts");
 
 const adminAuthRoutes = require("./routes/adminAuth");
 const adminRoutes = require("./routes/adminRoutes");
+const departmentRoutes = require("./routes/department.routes");
+const adminUserRoutes = require("./routes/adminUser.routes");
 
 const userAddressRoutes = require("./routes/userAddresses");
 const userWishlistRoutes = require("./routes/userWishlist");
 const cartRoutes = require("./routes/cart");
 const paymentRoutes = require("./routes/PaymentRoutes");
 const orderRoutes = require("./routes/order");
+
+
 
 // ---------------- EXPRESS APP ----------------
 const app = express();
@@ -67,6 +71,8 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admins", adminRoutes);   ///this is being used by user manger
 app.use("/api/admin/products", adminProducts);
+app.use("/api/departments", departmentRoutes);
+app.use("/api/admin-users", adminUserRoutes);
 
 // ---------------- DEFAULT ROUTE ----------------
 app.get("/", (req, res) => {

@@ -6,21 +6,9 @@ const Joi = require("joi");
 /* ==================== CART ITEM SUB-SCHEMA ==================== */
 const cartItemSchema = new mongoose.Schema(
   {
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-    quantity: {
-      type: Number,
-      min: 1,
-      default: 1,
-      required: true,
-    },
-    price: {
-      type: Number,
-      required: true, // snapshot price
-    },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    quantity: { type: Number, min: 1, default: 1, required: true },
+    price: { type: Number, required: true }, // snapshot price
   },
   { _id: true }
 );
@@ -28,11 +16,7 @@ const cartItemSchema = new mongoose.Schema(
 /* ==================== ORDER ITEM SUB-SCHEMA ==================== */
 const orderItemSchema = new mongoose.Schema(
   {
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
     quantity: { type: Number, min: 1, required: true },
     price: { type: Number, required: true }, // snapshot price
   },
@@ -55,22 +39,12 @@ const addressSchema = new mongoose.Schema(
 /* ==================== ORDER SUB-SCHEMA ==================== */
 const orderSchema = new mongoose.Schema(
   {
-    transactionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Transaction",
-      required: true,
-    },
-    items: {
-      type: [orderItemSchema],
-      default: [],
-    },
+    transactionId: { type: mongoose.Schema.Types.ObjectId, ref: "Transaction", required: true },
+    items: { type: [orderItemSchema], default: [] },
     totalAmount: { type: Number, required: true },
     paymentGateway: { type: String, required: true },
     status: { type: String, enum: ["COMPLETED", "FAILED"], default: "COMPLETED" },
-    deliveryAddress: {
-      type: addressSchema,
-      required: true,
-    },
+    deliveryAddress: { type: addressSchema, required: true },
     purchasedAt: { type: Date, default: Date.now },
   },
   { _id: true }
@@ -95,12 +69,7 @@ const permissionsSchema = new mongoose.Schema(
     payments: { type: permissionSchema, default: () => ({}) },
     content: {
       type: permissionSchema,
-      default: () => ({
-        view: true,
-        create: true,
-        edit: true,
-        delete: true,
-      }),
+      default: () => ({ view: true, create: true, edit: true, delete: true }),
     },
   },
   { _id: false }
@@ -109,74 +78,30 @@ const permissionsSchema = new mongoose.Schema(
 /* ==================== USER SCHEMA ==================== */
 const userSchema = new mongoose.Schema(
   {
-    username: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-
-    phoneNumber: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
+    username: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    phoneNumber: { type: String, trim: true, default: "" },
     password: {
       type: String,
       required: function () {
         return this.authProvider === "local";
       },
     },
-
-    authProvider: {
-      type: String,
-      enum: ["local", "google"],
-      default: "local",
-      required: true,
-    },
-
-    firebaseUid: {
-      type: String,
-      default: null,
-    },
-
-    profilePic: {
-      type: String,
-      default: "",
-    },
+    authProvider: { type: String, enum: ["local", "google"], default: "local", required: true },
+    firebaseUid: { type: String, default: null },
+    profilePic: { type: String, default: "" },
 
     /* ==================== ADDRESSES ==================== */
-    addresses: {
-      type: [addressSchema],
-      default: [],
-    },
+    addresses: { type: [addressSchema], default: [] },
 
     /* ==================== CART ==================== */
-    cart: {
-      type: [cartItemSchema],
-      default: [],
-    },
+    cart: { type: [cartItemSchema], default: [] },
 
     /* ==================== ORDERS ==================== */
-    orders: {
-      type: [orderSchema],
-      default: [],
-    },
+    orders: { type: [orderSchema], default: [] },
 
     /* ==================== WISHLIST ==================== */
-    wishlist: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "Product",
-      default: [],
-    },
+    wishlist: { type: [mongoose.Schema.Types.ObjectId], ref: "Product", default: [] },
 
     /* ==================== PASSWORD RESET ==================== */
     resetOtp: { type: String, default: null },
@@ -189,8 +114,17 @@ const userSchema = new mongoose.Schema(
     /* ==================== ROLE ==================== */
     role: {
       type: String,
-      enum: ["user", "admin", "super_admin", "moderator"],
+      enum: ["user", "admin", "super_admin"], // updated roles
       default: "user",
+    },
+
+    /* ==================== DEPARTMENT LINK ==================== */
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      required: function () {
+        return this.role === "admin"; // only admin requires department
+      },
     },
 
     /* ==================== PERMISSIONS ==================== */
@@ -206,7 +140,7 @@ const userSchema = new mongoose.Schema(
             content: { view: true, create: true, edit: true, delete: true },
           };
         }
-        return undefined;
+        return undefined; // normal users have no extra permissions
       },
     },
   },

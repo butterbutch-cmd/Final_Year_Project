@@ -1,94 +1,98 @@
-  const router = require("express").Router();
-  const bcrypt = require("bcrypt");
-  const {
-    User,
-    validateAdminSignup,
-    validateLogin
-  } = require("../models/User");
+const router = require("express").Router();
+const bcrypt = require("bcrypt");
+const Joi = require("joi");
+const { User, validateLogin } = require("../models/User");
 
-  /* ===========================================
-    ADMIN SIGNUP (DEV ONLY)
-  =========================================== */
-  router.post("/signup", async (req, res) => {
-    try {
-      // ✅ Correct validator
-      const { error } = validateAdminSignup(req.body);
-      if (error)
-        return res.status(400).json({ message: error.details[0].message });
+/* ===========================================
+   DEV ONLY – SUPER ADMIN SIGNUP
+=========================================== */
+router.post("/signup", async (req, res) => {
+  try {
+    // ✅ Local validator (DEV ONLY)
+    const schema = Joi.object({
+      username: Joi.string().min(3).required(),
+      email: Joi.string().email().required(),
+      password: Joi.string().min(6).required(),
+    });
 
-      // Check if email already exists
-      let user = await User.findOne({ email: req.body.email });
-      if (user)
-        return res.status(409).json({ message: "Email already exists" });
+    const { error } = schema.validate(req.body);
+    if (error)
+      return res.status(400).json({ message: error.details[0].message });
 
-      // Hash password
-      const saltRounds = parseInt(process.env.SALT) || 10;
-      const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+    // Check existing user
+    let user = await User.findOne({ email: req.body.email });
+    if (user)
+      return res.status(409).json({ message: "Email already exists" });
 
-      // Create super admin
-      user = new User({
-        username: req.body.username,
-        email: req.body.email,
-        password: hashedPassword,
-        authProvider: "local",
-        role: "super_admin",
-      });
+    // Hash password
+    const saltRounds = parseInt(process.env.SALT) || 10;
+    const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
-      await user.save();
+    // Create SUPER ADMIN
+    user = new User({
+      username: req.body.username,
+      email: req.body.email,
+      password: hashedPassword,
+      authProvider: "local",
+      role: "super_admin",
+    });
 
-      const token = user.generateAuthToken();
+    await user.save();
 
-      res.status(201).json({
-        token,
-        role: user.role,
-        message: "Super Admin created (Dev Only)",
-      });
+    const token = user.generateAuthToken();
 
-    } catch (err) {
-      console.error("Admin Signup Error:", err);
-      res.status(500).json({ message: "Server Error" });
+    res.status(201).json({
+      token,
+      role: user.role,
+      message: "Super Admin created (DEV ONLY)",
+    });
+
+  } catch (err) {
+    console.error("Admin Signup Error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+/* ===========================================
+   ADMIN / SUPER ADMIN LOGIN
+=========================================== */
+router.post("/login", async (req, res) => {
+  try {
+    const { error } = validateLogin(req.body);
+    if (error)
+      return res.status(400).json({ message: error.details[0].message });
+
+    const user = await User.findOne({ email: req.body.email });
+    if (!user)
+      return res.status(400).json({ message: "Invalid email or password" });
+
+    if (!user.password)
+      return res.status(400).json({ message: "User has no password set" });
+
+    const validPassword = await bcrypt.compare(
+      req.body.password,
+      user.password
+    );
+    if (!validPassword)
+      return res.status(400).json({ message: "Invalid email or password" });
+
+    // ✅ ONLY admin & super_admin
+    if (!["super_admin", "admin"].includes(user.role)) {
+      return res.status(403).json({ message: "Access denied. Not an admin." });
     }
-  });
 
-  /* ===========================================
-    ADMIN LOGIN
-  =========================================== */
-  router.post("/login", async (req, res) => {
-    try {
-      const { error } = validateLogin(req.body);
-      if (error)
-        return res.status(400).json({ message: error.details[0].message });
+    const token = user.generateAuthToken();
 
-      const user = await User.findOne({ email: req.body.email });
-      if (!user)
-        return res.status(400).json({ message: "Invalid email or password" });
+    res.json({
+      token,
+      role: user.role,
+      message: `Logged in as ${user.role.replace("_", " ").toUpperCase()}`,
+    });
 
-      if (!user.password)
-        return res.status(400).json({ message: "User has no password set." });
+  } catch (err) {
+    console.error("Admin Login Error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
 
-      const validPassword = await bcrypt.compare(
-        req.body.password,
-        user.password
-      );
-      if (!validPassword)
-        return res.status(400).json({ message: "Invalid email or password" });
-
-      const allowedRoles = ["super_admin", "admin", "moderator"];
-      if (!allowedRoles.includes(user.role))
-        return res.status(403).json({ message: "Access denied. Not an admin." });
-
-      const token = user.generateAuthToken();
-
-      res.json({
-        token,
-        role: user.role,
-        message: `Logged in as ${user.role.replace("_", " ").toUpperCase()}`,
-      });
-
-    } catch (err) {
-      console.error("Admin Login Error:", err);
-      res.status(500).json({ message: "Server Error" });
-    }
-  });
-
-  module.exports = router;
+module.exports = router;

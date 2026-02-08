@@ -5,6 +5,7 @@ const { User } = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const checkPermission = require("../middleware/checkPermission");
 const sendEmail = require("../utils/sendEmail");
+const Department = require("../models/Department");
 
 const router = express.Router();
 
@@ -13,15 +14,27 @@ const createAdminSchema = Joi.object({
   username: Joi.string().min(3).required(),
   email: Joi.string().email().required(),
   phoneNumber: Joi.string().min(7).required(),
-  role: Joi.string().valid("admin", "moderator", "super_admin").required(),
-  permissions: Joi.object().required()
+
+  role: Joi.string().valid("admin", "super_admin").required(),
+
+  department: Joi.string().when("role", {
+    is: "admin",
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(null)
+  }),
+
+  permissions: Joi.object().optional()
 });
+
 
 const updateAdminSchema = Joi.object({
-  permissions: Joi.object().required()
+  phoneNumber: Joi.string().min(7).optional(),
+  department: Joi.string().optional(),
+  permissions: Joi.object().optional()
 });
 
-// ------------------ CREATE ADMIN / MODERATOR ------------------
+
+// ------------------ CREATE ADMIN ------------------
 router.post(
   "/",
   authenticate,
@@ -33,7 +46,19 @@ router.post(
         return res.status(400).json({ message: error.details[0].message });
       }
 
-      const { username, email, phoneNumber, role, permissions } = req.body;
+      const { username, email, phoneNumber, role, department, permissions } = req.body;
+
+      let finalPermissions = permissions;
+
+      // If admin → load permissions from department
+      if (role === "admin") {
+        const dept = await Department.findById(department);
+        if (!dept) {
+          return res.status(400).json({ message: "Invalid department" });
+        }
+
+        finalPermissions = dept.permissions;
+      }
 
       // Only super admin can create another super admin
       if (role === "super_admin" && req.user.role !== "super_admin") {
@@ -70,9 +95,11 @@ router.post(
         phoneNumber,
         password: hashedPassword,
         role,
-        permissions,
+        department: role === "admin" ? department : undefined,
+        permissions: finalPermissions,
         authProvider: "local"
       });
+
 
       await newAdmin.save();
 
@@ -111,7 +138,8 @@ router.post(
   }
 );
 
-// ------------------ GET ADMINS / MODERATORS ------------------
+
+// ------------------ GET ADMINS ------------------
 router.get(
   "/",
   authenticate,
@@ -121,10 +149,13 @@ router.get(
       const staff = await User.find(
         { role: { $ne: "user" } },
         { password: 0, resetOtp: 0, resetOtpExpire: 0 }
-      ).sort({ createdAt: -1 });
+      )
+      .populate("department", "name") // <--- ADD THIS LINE
+      .sort({ createdAt: -1 });
 
       res.json(staff);
     } catch (err) {
+      console.error(err); // Good to log the specific error
       res.status(500).json({ message: "Failed to fetch admins." });
     }
   }
@@ -159,11 +190,18 @@ router.put(
       }
 
       // Only update permissions
+      const updates = {};
+
+      if (req.body.phoneNumber) updates.phoneNumber = req.body.phoneNumber;
+      if (req.body.department) updates.department = req.body.department;
+      if (req.body.permissions) updates.permissions = req.body.permissions;
+
       const updated = await User.findByIdAndUpdate(
         id,
-        { permissions: req.body.permissions },
+        updates,
         { new: true }
       ).select("-password -resetOtp -resetOtpExpire");
+
 
       res.json({ 
         message: "Admin permissions updated successfully", 
