@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { base64Decode } from "../utils/helpers";
@@ -12,6 +12,9 @@ const Success = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
 
+  // ✅ Ref to prevent duplicate verification calls
+  const hasVerified = useRef(false);
+
   const decodedToken = queryParams.get("data") ? base64Decode(queryParams.get("data")) : null;
   const sessionTransactionId = sessionStorage.getItem("current_transaction_id");
   const transactionId = sessionTransactionId || decodedToken?.transaction_uuid || null;
@@ -22,7 +25,11 @@ const Success = () => {
   const total_amount = isKhalti && rawAmount ? Number(rawAmount) / 100 : rawAmount;
 
   useEffect(() => {
-    verifyPaymentAndUpdateStatus();
+    // ✅ Only verify once
+    if (!hasVerified.current) {
+      hasVerified.current = true;
+      verifyPaymentAndUpdateStatus();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -53,7 +60,7 @@ const Success = () => {
         try {
           localStorage.removeItem("cart");
         } catch (err) {
-          // ignore
+          // ignore errors
         }
 
         // optional: remove session transaction id after short delay

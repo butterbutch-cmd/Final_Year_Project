@@ -7,6 +7,7 @@ import Inventory from "./pages/Inventory";
 import UserManager from "./pages/UserManager";
 import AdminRoles from "./pages/AdminRoles";
 import ContentManager from "./pages/ContentManager";
+import Payment from "./pages/Payment";
 
 const AdminPanel = () => {
   const [activePage, setActivePage] = useState("home");
@@ -51,7 +52,10 @@ const AdminPanel = () => {
       case "content":
         if (!permissions.content?.view) return <div>Access Denied</div>;
         return <ContentManager />;
-
+      
+      case "payment":
+        if (!permissions.payments?.view) return <div>Access Denied</div>
+        return <Payment/>
       default:
         return <AdminHome />;
     }

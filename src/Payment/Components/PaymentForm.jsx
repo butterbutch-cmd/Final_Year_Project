@@ -19,6 +19,11 @@
 //     paymentGateway: "esewa",
 //   });
 
+//   // ---------------- TAX & SHIPPING ----------------
+//   const TAX_RATE = 0.13; // 13% tax
+//   const BASE_SHIPPING_COST = 100; // default shipping
+//   const FREE_SHIPPING_THRESHOLD = 3000; // free shipping if subtotal > 3000
+
 //   // ---------------- FETCH CART ITEMS ----------------
 //   useEffect(() => {
 //     const fetchCart = async () => {
@@ -34,7 +39,6 @@
 //         console.error("Error fetching cart:", err);
 //       }
 //     };
-
 //     fetchCart();
 //   }, []);
 
@@ -57,15 +61,17 @@
 //         setLoadingAddress(false);
 //       }
 //     };
-
 //     fetchAddresses();
 //   }, []);
 
-//   // ---------------- CALCULATE TOTAL AMOUNT ----------------
-//   const totalAmount = cartItems.reduce(
+//   // ---------------- CALCULATE AMOUNTS ----------------
+//   const subtotal = cartItems.reduce(
 //     (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
 //     0
 //   );
+//   const taxAmount = subtotal * TAX_RATE;
+//   const shippingCost = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : BASE_SHIPPING_COST;
+//   const totalAmount = subtotal + taxAmount + shippingCost;
 
 //   // ---------------- HANDLE PAYMENT ----------------
 //   const handleSubmit = async (e) => {
@@ -87,9 +93,10 @@
 //           price: item.price,
 //           quantity: item.quantity,
 //         })),
-//         // optional: you can let backend compute total to avoid mismatch,
-//         // but we still send amount for convenience.
-//         amount: totalAmount,
+//         subtotal,
+//         taxAmount,
+//         shippingCost,
+//         amount: totalAmount, // total for payment
 //         paymentGateway: formData.paymentGateway,
 //         deliveryAddress: selectedAddress,
 //       };
@@ -102,10 +109,8 @@
 //       );
 
 //       if (response.data.url && response.data.transactionId) {
-//         // store transactionId (MongoDB id) — backend expects this later
 //         sessionStorage.setItem("current_transaction_id", response.data.transactionId);
-//         // redirect to payment provider (eSewa / Khalti)
-//         window.location.href = response.data.url;
+//         window.location.href = response.data.url; // redirect to payment gateway
 //       } else {
 //         alert("Payment URL missing");
 //       }
@@ -200,7 +205,7 @@
 //           ) : (
 //             <div className="space-y-2">
 //               {cartItems.map((item) => {
-//                 if (!item.product) return null; // skip invalid
+//                 if (!item.product) return null;
 //                 return (
 //                   <div key={item._id} className="flex justify-between p-3 border rounded-lg">
 //                     <span>
@@ -210,9 +215,23 @@
 //                   </div>
 //                 );
 //               })}
+//               <div className="flex justify-between text-sm mt-2">
+//                 <span>Subtotal:</span>
+//                 <span>Rs {subtotal.toFixed(2)}</span>
+//               </div>
+//               <div className="flex justify-between text-sm">
+//                 <span>Tax (13%):</span>
+//                 <span>Rs {taxAmount.toFixed(2)}</span>
+//               </div>
+//               <div className="flex justify-between text-sm">
+//                 <span>Shipping:</span>
+//                 <span>
+//                   Rs {shippingCost} {shippingCost === 0 && "(Free!)"}
+//                 </span>
+//               </div>
 //               <div className="flex justify-between font-semibold mt-2">
 //                 <span>Total:</span>
-//                 <span>Rs {totalAmount}</span>
+//                 <span>Rs {totalAmount.toFixed(2)}</span>
 //               </div>
 //             </div>
 //           )}
@@ -278,6 +297,7 @@
 // export default PaymentComponent;
 
 
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -296,7 +316,7 @@ const PaymentComponent = () => {
     customerName: "",
     customerEmail: "",
     customerPhone: "",
-    paymentGateway: "esewa",
+    paymentGateway: "esewa", // default
   });
 
   // ---------------- TAX & SHIPPING ----------------
@@ -382,17 +402,41 @@ const PaymentComponent = () => {
       };
 
       const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "http://localhost:5000/api/payment/initiate-payment",
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
 
-      if (response.data.url && response.data.transactionId) {
-        sessionStorage.setItem("current_transaction_id", response.data.transactionId);
-        window.location.href = response.data.url; // redirect to payment gateway
+      if (formData.paymentGateway === "cod" || formData.paymentGateway === "cash_on_delivery") {
+        // === Cash on Delivery flow ===
+        const response = await axios.post(
+          "http://localhost:5000/api/payment/initiate-cash-on-delivery-payment",
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // expected response example: { transactionId: "...", message: "Order placed" }
+        if (response.data?.transactionId) {
+          sessionStorage.setItem("current_transaction_id", response.data.transactionId);
+          // You can redirect to any order-success page you have. Change as needed:
+          // navigate("/order-success");
+          alert(
+            `Order placed (Cash on Delivery).\nTransaction ID: ${response.data.transactionId}`
+          );
+          // Optionally clear cart in client or refetch cart state here
+        } else {
+          alert(response.data?.message || "Cash on Delivery initiation failed");
+        }
       } else {
-        alert("Payment URL missing");
+        // === Online payment (eSewa / Khalti) flow ===
+        const response = await axios.post(
+          "http://localhost:5000/api/payment/initiate-payment",
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.url && response.data.transactionId) {
+          sessionStorage.setItem("current_transaction_id", response.data.transactionId);
+          window.location.href = response.data.url; // redirect to payment gateway
+        } else {
+          alert("Payment URL missing");
+        }
       }
     } catch (err) {
       console.error("Payment error:", err.response?.data || err);
@@ -560,13 +604,18 @@ const PaymentComponent = () => {
           >
             <option value="esewa">eSewa</option>
             <option value="khalti">Khalti</option>
+            <option value="cod">Cash on Delivery</option>
           </select>
           <button
             type="submit"
             disabled={isSubmitting}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg"
           >
-            {isSubmitting ? "Processing..." : "Proceed to Payment"}
+            {isSubmitting
+              ? "Processing..."
+              : formData.paymentGateway === "cod"
+              ? "Place Order (Cash on Delivery)"
+              : "Proceed to Payment"}
           </button>
         </form>
       </div>

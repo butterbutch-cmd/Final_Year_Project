@@ -43,12 +43,25 @@ const orderSchema = new mongoose.Schema(
     items: { type: [orderItemSchema], default: [] },
     totalAmount: { type: Number, required: true },
     paymentGateway: { type: String, required: true },
-    status: { type: String, enum: ["COMPLETED", "FAILED"], default: "COMPLETED" },
+
+    // ✅ Add CANCELLED to status enum
+    status: { type: String, enum: ["COMPLETED", "FAILED", "CANCELLED"], default: "COMPLETED" },
+
+    // ✅ Optional: track delivery separately
+    deliveryStatus: { type: String, enum: ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"], default: "PENDING" },
+
     deliveryAddress: { type: addressSchema, required: true },
     purchasedAt: { type: Date, default: Date.now },
+
+    // Optional: store cancellation info
+    cancellation: {
+      reason: { type: String, default: null },
+      cancelledAt: { type: Date, default: null },
+    },
   },
   { _id: true }
 );
+
 
 /* ==================== PERMISSIONS SUB-SCHEMA ==================== */
 const permissionSchema = new mongoose.Schema(
@@ -67,13 +80,12 @@ const permissionsSchema = new mongoose.Schema(
     users: { type: permissionSchema, default: () => ({}) },
     orders: { type: permissionSchema, default: () => ({ view: true }) },
     payments: { type: permissionSchema, default: () => ({}) },
-    content: {
-      type: permissionSchema,
-      default: () => ({ view: true, create: true, edit: true, delete: true }),
-    },
+    content: { type: permissionSchema, default: () => ({ view: true, create: true, edit: true, delete: true }) },
+    reviews: { type: permissionSchema, default: () => ({ view: true, create: true, edit: true, delete: true }) }, // ✅ ADD THIS
   },
   { _id: false }
 );
+
 
 /* ==================== USER SCHEMA ==================== */
 const userSchema = new mongoose.Schema(
