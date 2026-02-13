@@ -96,7 +96,6 @@ router.post(
         password: hashedPassword,
         role,
         department: role === "admin" ? department : undefined,
-        permissions: finalPermissions,
         authProvider: "local"
       });
 
@@ -247,6 +246,29 @@ router.delete(
 );
 
 // ------------------ GET CURRENT ADMIN PROFILE ------------------
+// router.get("/me", authenticate, async (req, res) => {
+//   try {
+//     const admin = await User.findById(req.user._id).select(
+//       "-password -resetOtp -resetOtpExpire"
+//     );
+
+//     if (!admin) {
+//       return res.status(404).json({ message: "Admin not found" });
+//     }
+
+//     res.json({
+//       _id: admin._id,
+//       username: admin.username,
+//       email: admin.email,
+//       role: admin.role,
+//       permissions: admin.permissions
+//     });
+//   } catch (err) {
+//     console.error("GET /me error:", err);
+//     res.status(500).json({ message: "Failed to fetch admin profile" });
+//   }
+// });
+
 router.get("/me", authenticate, async (req, res) => {
   try {
     const admin = await User.findById(req.user._id).select(
@@ -269,5 +291,6 @@ router.get("/me", authenticate, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch admin profile" });
   }
 });
+
 
 module.exports = router;

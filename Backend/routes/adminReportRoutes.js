@@ -65,7 +65,7 @@ router.get(
 router.get(
   "/reports/:reviewId",
   auth,
-  checkPermission("reviews", "view"),
+  checkPermission("content", "view"),
   getReviewReports
 );
 
@@ -73,7 +73,7 @@ router.get(
 router.get(
   "/reports/:reviewId/product",
   auth,
-  checkPermission("reviews", "edit"),
+  checkPermission("content", "edit"),
   getReviewProduct
 );
 
@@ -81,7 +81,7 @@ router.get(
 router.delete(
   "/reviews/:reviewId",
   auth,
-  checkPermission("reviews", "delete"),
+  checkPermission("content", "delete"),
   deleteReview
 );
 

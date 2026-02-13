@@ -222,6 +222,7 @@ const adminRoutes = require("./routes/adminRoutes"); // user manager
 const departmentRoutes = require("./routes/department.routes");
 const adminUserRoutes = require("./routes/adminUser.routes");
 const adminReportRoutes = require("./routes/adminReportRoutes"); // ✅ REPORT ROUTES
+const moduleRoutes = require('./routes/moduleRoutes');
 
 // USER FEATURES
 const userAddressRoutes = require("./routes/userAddresses");
@@ -285,7 +286,7 @@ app.use("/api/user/orders", orderRoutes);
 // USER checkout / gateway callbacks
 app.use("/api/payment", paymentRoutes);
 
-// ADMIN payment management (dashboard)
+// ADMIN payment & delivery management (dashboard)
 app.use("/api/admin/payments", adminPaymentRoutes);
 
 // ==================================================
@@ -297,6 +298,7 @@ app.use("/api/admins", adminRoutes);
 app.use("/api/admin/products", adminProducts);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/admin-users", adminUserRoutes);
+app.use('/api/modules', moduleRoutes);
 
 // ---------------- DEFAULT ROUTE ----------------
 app.get("/", (req, res) => {

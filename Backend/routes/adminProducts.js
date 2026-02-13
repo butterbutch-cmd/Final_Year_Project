@@ -21,7 +21,7 @@ router.get(
       res.status(500).json({ error: "Failed to fetch products" });
     }
   }
-);
+);  
 
 /* ================================
    CREATE PRODUCT
