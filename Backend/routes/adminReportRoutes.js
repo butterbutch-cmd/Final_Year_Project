@@ -1,42 +1,3 @@
-// // file: routes/adminReportRoutes.js
-// const express = require("express");
-// const router = express.Router();
-
-// const {
-//   getReportedReviews,
-//   getReviewReports,
-//   getReviewProduct,
-// } = require("../controllers/adminReportController");
-
-// const auth = require("../middleware/auth");
-// const checkPermission = require("../middleware/checkPermission");
-
-// /* ================= ADMIN REPORT ROUTES ================= */
-
-// router.get(
-//   "/reports",
-//   auth,
-// //   checkPermission("reviews", "read"),
-//   getReportedReviews
-// );
-
-// router.get(
-//   "/reports/:reviewId",
-//   auth,
-// //   checkPermission("reviews", "read"),
-//   getReviewReports
-// );
-
-// router.get(
-//   "/reports/:reviewId/product",
-//   auth,
-//     //   checkPermission("reviews", "read"),
-//   getReviewProduct
-// );
-
-// module.exports = router;
-
-
 // file: routes/adminReportRoutes.js
 const express = require("express");
 const router = express.Router();
@@ -48,8 +9,8 @@ const {
   deleteReview, // ✅ added
 } = require("../controllers/adminReportController");
 
-const auth = require("../middleware/auth");
-const checkPermission = require("../middleware/checkPermission");
+const auth = require("../middleware/auth"); /// changed from authenticate to auth for consistency
+const checkPermission = require("../middleware/checkPermission");/// added for permission checks
 
 /* ================= ADMIN REPORT ROUTES ================= */
 

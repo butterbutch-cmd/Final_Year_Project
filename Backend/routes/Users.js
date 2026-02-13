@@ -256,5 +256,37 @@ router.put(
   }
 );
 
+// -----------------------
+// DELETE USER (ADMIN ONLY)
+// -----------------------
+router.delete(
+  "/:id",
+  authenticate,
+  checkPermission("users", "delete"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await User.findById(id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Safety: do not delete admins / staff
+      if (user.role !== "user") {
+        return res.status(403).json({
+          message: "You cannot delete admin or staff accounts",
+        });
+      }
+
+      await User.findByIdAndDelete(id);
+
+      res.json({ message: "User deleted successfully" });
+    } catch (err) {
+      console.error("Delete user error:", err);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  }
+);
+
+
 
 module.exports = router;

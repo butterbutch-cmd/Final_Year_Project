@@ -45,8 +45,16 @@
 //     items: { type: [orderItemSchema], default: [] },
 //     totalAmount: { type: Number, required: true },
 //     paymentGateway: { type: String, required: true },
-//     status: { type: String, enum: ["COMPLETED", "FAILED", "CANCELLED"], default: "COMPLETED" },
-//     deliveryStatus: { type: String, enum: ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"], default: "PENDING" },
+//     status: {
+//       type: String,
+//       enum: ["PENDING", "COMPLETED", "FAILED", "REFUNDED", "CANCELLED"],
+//       default: "PENDING",
+//     },
+//     deliveryStatus: {
+//       type: String,
+//       enum: ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"],
+//       default: "PENDING",
+//     },
 //     deliveryAddress: { type: addressSchema, required: true },
 //     purchasedAt: { type: Date, default: Date.now },
 //     cancellation: {
@@ -74,6 +82,7 @@
 //     username: { type: String, required: true, trim: true },
 //     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
 //     phoneNumber: { type: String, trim: true, default: "" },
+
 //     password: {
 //       type: String,
 //       required: function () {
@@ -94,6 +103,7 @@
 //     addresses: { type: [addressSchema], default: [] },
 //     cart: { type: [cartItemSchema], default: [] },
 //     orders: { type: [orderSchema], default: [] },
+
 //     wishlist: {
 //       type: [mongoose.Schema.Types.ObjectId],
 //       ref: "Product",
@@ -130,45 +140,54 @@
 // );
 
 // /* ==================== AUTO-GENERATE PERMISSIONS ==================== */
-// /* IMPORTANT: NO next() because async */
-// userSchema.pre("save", async function () {
-//   // Only run for admin & super_admin
-//   if (this.role !== "admin" && this.role !== "super_admin") return;
+// userSchema.pre("save", async function (next) {
+//   try {
+//     if (this.role !== "admin" && this.role !== "super_admin") {
+//       return next();
+//     }
 
-//   const modules = await Module.find({ isActive: true });
+//     const modules = await Module.find({ isActive: true });
 
-//   // Clear old permissions before regenerating
-//   this.permissions = new Map();
+//     // Reset permissions before regenerating
+//     this.permissions = new Map();
 
-//   // SUPER ADMIN → FULL ACCESS
-//   if (this.role === "super_admin") {
-//     modules.forEach((mod) => {
-//       this.permissions.set(mod.name, {
-//         view: true,
-//         create: true,
-//         edit: true,
-//         delete: true,
+//     // SUPER ADMIN → FULL ACCESS
+//     if (this.role === "super_admin") {
+//       modules.forEach((mod) => {
+//         this.permissions.set(mod.name, {
+//           view: true,
+//           create: true,
+//           edit: true,
+//           delete: true,
+//         });
 //       });
-//     });
-//     return;
-//   }
 
-//   // ADMIN → INHERIT FROM DEPARTMENT
-//   if (this.role === "admin" && this.department) {
-//     const department = await Department.findById(this.department);
+//       return next();
+//     }
 
-//     if (!department) return;
+//     // ADMIN → INHERIT FROM DEPARTMENT
+//     if (this.role === "admin") {
+//       const department = await Department.findById(this.department);
 
-//     modules.forEach((mod) => {
-//       const deptPerm = department.permissions.get(mod.name);
+//       if (!department) return next();
 
-//       this.permissions.set(mod.name, {
-//         view: deptPerm?.view || false,
-//         create: deptPerm?.create || false,
-//         edit: deptPerm?.edit || false,
-//         delete: deptPerm?.delete || false,
+//       modules.forEach((mod) => {
+//         const deptPerm =
+//           department.permissions?.get?.(mod.name) ||
+//           department.permissions?.[mod.name];
+
+//         this.permissions.set(mod.name, {
+//           view: deptPerm?.view ?? mod.defaultPermissions?.view ?? false,
+//           create: deptPerm?.create ?? mod.defaultPermissions?.create ?? false,
+//           edit: deptPerm?.edit ?? mod.defaultPermissions?.edit ?? false,
+//           delete: deptPerm?.delete ?? mod.defaultPermissions?.delete ?? false,
+//         });
 //       });
-//     });
+//     }
+
+//     next();
+//   } catch (err) {
+//     next(err);
 //   }
 // });
 
@@ -362,54 +381,45 @@ const userSchema = new mongoose.Schema(
 );
 
 /* ==================== AUTO-GENERATE PERMISSIONS ==================== */
-userSchema.pre("save", async function (next) {
-  try {
-    if (this.role !== "admin" && this.role !== "super_admin") {
-      return next();
-    }
+userSchema.pre("save", async function () {
+  // Only run for admin or super_admin
+  if (this.role !== "admin" && this.role !== "super_admin") return;
 
-    const modules = await Module.find({ isActive: true });
+  const modules = await Module.find({ isActive: true });
 
-    // Reset permissions before regenerating
-    this.permissions = new Map();
+  // Reset permissions before regenerating
+  this.permissions = new Map();
 
-    // SUPER ADMIN → FULL ACCESS
-    if (this.role === "super_admin") {
-      modules.forEach((mod) => {
-        this.permissions.set(mod.name, {
-          view: true,
-          create: true,
-          edit: true,
-          delete: true,
-        });
+  // SUPER ADMIN → FULL ACCESS
+  if (this.role === "super_admin") {
+    modules.forEach((mod) => {
+      this.permissions.set(mod.name, {
+        view: true,
+        create: true,
+        edit: true,
+        delete: true,
       });
+    });
+    return;
+  }
 
-      return next();
-    }
+  // ADMIN → INHERIT FROM DEPARTMENT
+  if (this.role === "admin") {
+    const department = await Department.findById(this.department);
 
-    // ADMIN → INHERIT FROM DEPARTMENT
-    if (this.role === "admin") {
-      const department = await Department.findById(this.department);
+    // If department missing (e.g., new Google user), assign defaults
+    modules.forEach((mod) => {
+      const deptPerm =
+        department?.permissions?.get?.(mod.name) ||
+        department?.permissions?.[mod.name];
 
-      if (!department) return next();
-
-      modules.forEach((mod) => {
-        const deptPerm =
-          department.permissions?.get?.(mod.name) ||
-          department.permissions?.[mod.name];
-
-        this.permissions.set(mod.name, {
-          view: deptPerm?.view ?? mod.defaultPermissions?.view ?? false,
-          create: deptPerm?.create ?? mod.defaultPermissions?.create ?? false,
-          edit: deptPerm?.edit ?? mod.defaultPermissions?.edit ?? false,
-          delete: deptPerm?.delete ?? mod.defaultPermissions?.delete ?? false,
-        });
+      this.permissions.set(mod.name, {
+        view: deptPerm?.view ?? mod.defaultPermissions?.view ?? false,
+        create: deptPerm?.create ?? mod.defaultPermissions?.create ?? false,
+        edit: deptPerm?.edit ?? mod.defaultPermissions?.edit ?? false,
+        delete: deptPerm?.delete ?? mod.defaultPermissions?.delete ?? false,
       });
-    }
-
-    next();
-  } catch (err) {
-    next(err);
+    });
   }
 });
 

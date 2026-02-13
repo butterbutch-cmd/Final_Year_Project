@@ -25,7 +25,18 @@ const modules = [
     label: "Content Management",
     defaultPermissions: { view: true, create: false, edit: false, delete: false },
   },
+  {
+    name: "marketing",                // NEW MODULE
+    label: "Marketing Management",    // Display label
+    defaultPermissions: {             // Default permissions
+      view: true,
+      create: false,
+      edit: false,
+      delete: false
+    },
+  },
 ];
+
 
 mongoose
   .connect(DB_URI)
