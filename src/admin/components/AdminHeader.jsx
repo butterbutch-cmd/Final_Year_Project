@@ -13,13 +13,19 @@ export default function AdminHeader() {
   // Decode JWT function
   const decodeToken = (token) => {
     try {
-      const payload = token.split(".")[1];
+      if (!token) return null;
+
+      const parts = token.split(".");
+      if (parts.length !== 3) return null;
+
+      const payload = parts[1];
       return JSON.parse(atob(payload));
     } catch (err) {
       console.error("Invalid token", err);
       return null;
     }
   };
+
 
   // Format role nicely for UI
   const formatRole = (role) => {
@@ -33,37 +39,35 @@ export default function AdminHeader() {
 
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+useEffect(() => {
+  const token = localStorage.getItem("adminToken");
 
-    if (token) {
-      const decoded = decodeToken(token);
+  if (token) {
+    const decoded = decodeToken(token);
 
-      if (decoded) {
-        // 🔥 PRINT FULL JWT CONTENT TO CONSOLE
-        console.log("🛡️ Decoded JWT Payload:", decoded);
+    if (decoded) {
+      console.log("🛡️ Decoded JWT Payload:", decoded);
 
-        // Optional: Pretty print each field
-        Object.entries(decoded).forEach(([key, value]) => {
-          console.log(`🔹 ${key}:`, value);
-        });
-
-        setAdminInfo((prev) => ({
-          ...prev,
-          // 👇 Pull username instead of name
-          name: decoded.username || "Admin User",
-          role: formatRole(decoded.role),
-        }));
-      }
-    } else {
-      console.warn("⚠️ No adminToken found in localStorage");
+      Object.entries(decoded).forEach(([key, value]) => {
+        console.log(`🔹 ${key}:`, value);
+      });
 
       setAdminInfo((prev) => ({
         ...prev,
-        role: "Not Logged In",
+        name: decoded.username || "Admin User",
+        role: formatRole(decoded.role),
       }));
     }
-  }, []);
+  } else {
+    console.warn("⚠️ No adminToken found in localStorage");
+
+    setAdminInfo((prev) => ({
+      ...prev,
+      role: "Not Logged In",
+    }));
+  }
+}, []);
+
 
 
 

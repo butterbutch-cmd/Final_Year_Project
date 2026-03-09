@@ -28,6 +28,7 @@ const userAddressRoutes = require("./routes/userAddresses");
 const userWishlistRoutes = require("./routes/userWishlist");
 const cartRoutes = require("./routes/cart");
 const orderRoutes = require("./routes/order");
+const forumRoutes = require("./routes/forumRoutes");
 
 // PAYMENTS
 const paymentRoutes = require("./routes/PaymentRoutes");        // USER payments
@@ -77,7 +78,7 @@ app.use("/api/user/addresses", userAddressRoutes);
 app.use("/api/user/wishlist", userWishlistRoutes);
 app.use("/api/user/cart", cartRoutes);
 app.use("/api/user/orders", orderRoutes);
-
+app.use("/api/forum", forumRoutes);
 // ==================================================
 // ================= PAYMENT ROUTES =================
 // ==================================================

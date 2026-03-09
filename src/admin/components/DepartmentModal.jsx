@@ -811,7 +811,7 @@ const DepartmentModal = ({
                   </p>
                 </div>
 
-                {/* Module Management / Refresh */}
+                {/* Module Management / Refresh
                 <div className="border-t border-gray-200 pt-4">
                   <h4 className="font-medium mb-2">Module Management</h4>
                   <p className="text-sm text-gray-600 mb-3">
@@ -833,7 +833,7 @@ const DepartmentModal = ({
                       </div>
                     ))}
                   </div>
-                </div>
+                </div> */}
 
                 {/* Action Buttons */}
                 <div className="flex justify-between items-center pt-6 border-t border-gray-200">

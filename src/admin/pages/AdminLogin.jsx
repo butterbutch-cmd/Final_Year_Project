@@ -37,7 +37,7 @@ const AdminLogin = () => {
 
       const { data } = await axios.post(url, payload);
 
-      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminToken", data.token);///
       alert(data.message || "Success");
 
       // redirect to admin dashboard

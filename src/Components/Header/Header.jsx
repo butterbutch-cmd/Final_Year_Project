@@ -11,90 +11,118 @@ export default function Header() {
   const [user, setUser] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // 🔐 Prevent double fetch in React 18 StrictMode
   const fetchedRef = useRef(false);
 
   const toggleProfileMenu = () => {
-    if (!user) return;
+    console.log("🔹 Toggling profile menu (current state):", showProfileMenu);
+    if (!user) {
+      console.log("❌ Cannot open profile menu: no user logged in");
+      return;
+    }
     setShowProfileMenu((prev) => !prev);
   };
 
-  const handleSignUpclick = () => navigate("/LoginPage");
+  const handleSignUpclick = () => {
+    console.log("🔹 Navigating to LoginPage");
+    navigate("/LoginPage");
+  };
 
-  const handleSearchClick = () => alert(`Searching for: ${searchQuery}`);
-  const handleSearchChange = (e) => setSearchQuery(e.target.value);
-  const handleKeyPress = (e) => e.key === "Enter" && handleSearchClick();
+  const handleSearchClick = () => {
+    console.log("🔹 Search clicked. Query:", searchQuery);
+  };
+
+  const handleSearchChange = (e) => {
+    console.log("🔹 Search input changed:", e.target.value);
+    setSearchQuery(e.target.value);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      console.log("🔹 Enter pressed in search input");
+      handleSearchClick();
+    }
+  };
 
   // ============================
-  // FETCH USER USING JWT (SAFE)
+  // FETCH USER USING JWT
   // ============================
-useEffect(() => {
-  if (fetchedRef.current) return;
-  fetchedRef.current = true;
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
 
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
+    console.log("🔹 Token from localStorage:", token);
 
-  if (token) {
-    console.log("✅ User is logged in (token found)");
-  } else {
-    console.log("❌ User is NOT logged in (no token)");
-  }
-  const fetchUser = async () => {
-  if (!token) return;
-
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) {
-      if (res.status === 401 || res.status === 403) {
-        console.warn("⚠️ JWT invalid or expired");
-        localStorage.removeItem("token");
-        setUser(null);
-        console.log("❌ User logged out (invalid token)");
+    const fetchUser = async () => {
+      if (!token) {
+        console.log("❌ No token, skipping fetchUser");
+        return;
       }
-      return;
-    }
 
-    const data = await res.json();
+      try {
+        const res = await fetch("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-    if (!data) {
-      console.warn("⚠️ No user data returned from backend");
-      setUser(null);
-      return;
-    }
+        console.log("🔹 Fetch response status:", res.status);
 
-    setUser(data);
-    console.log("✅ User authenticated:", data.username || "Unknown");
-  } catch (err) {
-    console.error("Error fetching user:", err);
-    setUser(null); // fallback
-  }
-};
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.warn("⚠️ JWT invalid or expired");
+            localStorage.removeItem("token");
+            setUser(null);
+            console.log("❌ User logged out (invalid token)");
+          }
+          return;
+        }
 
+        const data = await res.json();
+        console.log("🔹 Fetched user data:", data);
 
-  fetchUser();
-}, []);
+        if (!data) {
+          console.warn("⚠️ No user data returned from backend");
+          setUser(null);
+          return;
+        }
 
+        setUser(data);
+        console.log("✅ User authenticated:", data.username || "Unknown");
+        console.log("✅ Logged in user ID:", data._id);
+      } catch (err) {
+        console.error("❌ Error fetching user:", err);
+        setUser(null);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   // ============================
   // NAVIGATION
   // ============================
   const goToProfile = () => {
+    console.log("🔹 Navigating to profile page");
     navigate("/profile");
     setShowProfileMenu(false);
   };
+  
+  const goToOrderHistory = () => {
+    console.log("🔹 Navigating to order history page");
+    navigate("/orders");
+    setShowProfileMenu(false);
+  }
 
   const logoutUser = () => {
+    console.log("🔹 Logging out user");
     localStorage.removeItem("token");
     setUser(null);
     setShowProfileMenu(false);
     navigate("/LoginPage");
   };
 
+  // ============================
+  // Render (UI still here but mostly for reference)
+  // ============================
   return (
     <>
       <div className="HeaderContainer">
@@ -124,24 +152,23 @@ useEffect(() => {
               <User2 size={22} />
             </button>
 
-            <button className="icon-btn">
-              <Heart size={22} />
+            <button className="icon-btn" onClick={() => navigate("/wishlist")}>
+              <Heart size={22} /> 
             </button>
 
-            <button className="icon-btn-cart">
+            <button className="icon-btn-cart" onClick={()=> navigate("/checkout")}>
               <ShoppingBag size={22} />
               <span className="cart-badge">0</span>
             </button>
 
             {user ? (
-              <Button text="Discuss With Us" onClick={() => navigate("/forum")} />
+              <Button text="Discuss With Us" onClick={() => { console.log("🔹 Navigating to forum"); navigate("/forum"); }} />
             ) : (
               <Button text="Get Started" onClick={handleSignUpclick} />
             )}
           </div>
         </div>
 
-        {/* NAV BAR */}
         <div className="HeaderContainer2">
           <nav className="Nav-Bar">
             <ul>
@@ -158,7 +185,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* PROFILE DROPDOWN */}
       {showProfileMenu && user && (
         <div className="profile-overlay">
           <div className="profile-card">
@@ -167,7 +193,7 @@ useEffect(() => {
 
             <ul className="profile-menu-list">
               <li onClick={goToProfile}>Edit Profile</li>
-              <li>Order History</li>
+              <li onClick={goToOrderHistory}>Order History</li>
               <li onClick={logoutUser}>Logout</li>
             </ul>
           </div>
