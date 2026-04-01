@@ -104,6 +104,7 @@ import PaymentForm from "./Payment/Components/PaymentForm";
 import Success from "./Payment/Components/Success";       
 import Failure from "./Payment/Components/Failure";       
 import ForumPage from "./Pages/ForumPage";   // ✅ Added ForumPage
+import ThreadPage from "./Pages/ThreadPage"; // ✅ Added ThreadPage
 import "./App.css";
 
 export default function App() {
@@ -122,6 +123,8 @@ export default function App() {
 
             {/* ✅ Forum Route (Public viewing, login required only for actions) */}
             <Route path="/forum" element={<ForumPage />} />
+              {/* ✅ Thread Route (Public viewing, login required only for actions) */}
+              <Route path="/forum/:threadId" element={<ThreadPage />} />
 
             {/* ================= USER PROTECTED ROUTES ================= */}
             <Route

@@ -40,13 +40,13 @@ const commentSchema = new mongoose.Schema(
       index: true
     },
 
-    /* 📊 Number of replies (for performance optimization) */
+    /* 📊 Number of replies */
     repliesCount: {
       type: Number,
       default: 0
     },
 
-    /* 🧱 Optional depth limiter (helps prevent 50-level nesting) */
+    /* 🧱 Depth */
     depth: {
       type: Number,
       default: 0
@@ -63,15 +63,38 @@ const commentSchema = new mongoose.Schema(
       default: false
     },
 
+    /* 🔥 REPORT SYSTEM */
     reportsCount: {
       type: Number,
-      default: 0
-    }
+      default: 0,
+      index: true
+    },
+
+    reports: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+
+        reason: {
+          type: String,
+          required: true,
+          trim: true
+        },
+
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ]
   },
   { timestamps: true }
 );
 
-/* 🔍 Optimized compound index for nested loading */
+/* 🔍 Optimized compound index */
 commentSchema.index({ thread: 1, parentComment: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Comment", commentSchema);

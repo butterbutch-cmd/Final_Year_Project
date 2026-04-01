@@ -1,47 +1,50 @@
+// pages/ForumPage.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../Components/Header/Header";
 import ThreadRow from "../Components/Forum/ThreadRow";
-import CommentCard from "../Components/Forum/CommentCard";
 import { jwtDecode } from "jwt-decode";
 import {
   createThread,
   getThreads,
-  getThreadById,
-  addComment,
-  vote,
   deleteThread,
-  deleteComment,
-  editThread,      // frontend helper (or API) – used only for thread editing
-  editComment,     // we will assume there is an API for editing comments
 } from "../services/forumAPI";
 
 const TABS = ["Latest", "Unread", "Rising", "Most Liked", "Follow Feed"];
-const CATEGORIES = ["All Categories", "General", "Plant Care", "Pests & Disease", "Propagation", "Shopping"];
+const CATEGORIES = [
+  "All Categories",
+  "General",
+  "Plant Care",
+  "Pests & Disease",
+  "Propagation",
+  "Shopping",
+];
+
 const avatarColors = [
-  "bg-teal-600", "bg-purple-500", "bg-orange-400",
-  "bg-pink-500", "bg-blue-500", "bg-green-600",
-  "bg-red-500", "bg-indigo-500", "bg-yellow-500",
+  "bg-teal-600",
+  "bg-purple-500",
+  "bg-orange-400",
+  "bg-pink-500",
+  "bg-blue-500",
+  "bg-green-600",
+  "bg-red-500",
+  "bg-indigo-500",
+  "bg-yellow-500",
 ];
 
 export default function ForumPage() {
+  const navigate = useNavigate();
+
   const [threads, setThreads] = useState([]);
-  const [selectedThread, setSelectedThread] = useState(null);
-  const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newThread, setNewThread] = useState({ title: "", content: "", tags: "" });
-  const [newComment, setNewComment] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState("Latest");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [showCategoryDrop, setShowCategoryDrop] = useState(false);
 
-  // local editing state for thread
-  const [isEditingThread, setIsEditingThread] = useState(false);
-  const [editThreadDraft, setEditThreadDraft] = useState({ title: "", content: "", tags: [] });
-
   const token = localStorage.getItem("token");
   let currentUser = null;
-
   if (token) {
     try {
       const decoded = jwtDecode(token);
@@ -50,36 +53,34 @@ export default function ForumPage() {
         username: decoded.username,
       };
     } catch (err) {
-      console.error("Invalid token");
+      console.error("Invalid token", err);
     }
   }
 
-  /* ========================= HELPERS ========================= */
-  const refreshThread = async () => {
-    if (!selectedThread) return;
-    try {
-      const data = await getThreadById(selectedThread._id);
-      setSelectedThread(data.thread);
-      setComments(data.comments || []);
-    } catch (err) {
-      console.error("Failed to refresh thread", err);
-    }
-  };
+  const inputCls =
+    "w-full px-3.5 py-2.5 rounded-lg border border-stone-200 bg-white text-[14px] text-stone-800 outline-none transition focus:border-green-400 focus:ring-2 focus:ring-green-100 resize-none";
+
+  const getAvatarColor = (username, offset = 0) =>
+    avatarColors[((username?.charCodeAt(0) || 0) + offset) % avatarColors.length];
 
   /* ========================= LOAD ========================= */
   const loadThreads = async (params = {}) => {
     try {
       setLoading(true);
+      // you can pass params like { tab: activeTab, category: selectedCategory } when supporting server filters
       const data = await getThreads(params);
-      setThreads(Array.isArray(data) ? data : (data.threads || []));
+      setThreads(Array.isArray(data) ? data : data.threads || []);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load threads", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadThreads(); }, []);
+  useEffect(() => {
+    loadThreads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ========================= CREATE ========================= */
   const handleCreateThread = async (e) => {
@@ -88,160 +89,42 @@ export default function ForumPage() {
       const tags = newThread.tags
         ? newThread.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
-      await createThread({ ...newThread, tags });
+      const payload = { ...newThread, tags };
+      await createThread(payload);
       setNewThread({ title: "", content: "", tags: "" });
       setShowCreateModal(false);
       loadThreads();
     } catch (err) {
-      alert(err.message || "Failed to create thread");
-    }
-  };
-
-  /* ========================= VIEW ========================= */
-  const handleViewThread = async (id) => {
-    try {
-      const data = await getThreadById(id);
-      setSelectedThread(data.thread);
-      setComments(data.comments || []);
-      setIsEditingThread(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
+      alert(err?.message || "Failed to create thread");
       console.error(err);
     }
   };
 
-  /* ========================= COMMENT (root) ========================= */
-  const handleAddComment = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-    try {
-      await addComment(selectedThread._id, newComment);
-      await refreshThread();               // ← refresh after adding
-      setNewComment("");
-      loadThreads();                        // update thread list activity
-    } catch (err) {
-      alert(err.message || "Failed to comment");
-    }
-  };
-
-  /* ========================= REPLY TO COMMENT ========================= */
-  const handleReplyToComment = async (parentId, content, clearCallback) => {
-    if (!content || !content.trim()) return;
-    try {
-      await addComment(selectedThread._id, content, parentId);
-      await refreshThread();               // ← refresh after reply
-      if (typeof clearCallback === "function") clearCallback();
-      loadThreads();
-    } catch (err) {
-      alert(err.message || "Failed to post reply");
-    }
-  };
-
-  /* ========================= EDIT COMMENT ========================= */
-  // Assume editComment is an API function (adjust if your actual API is named differently)
-  const handleEditComment = async (id, newContent, onSuccess) => {
-    if (!newContent || !newContent.trim()) return;
-    try {
-      await editComment(id, newContent);   // API call to update the comment
-      await refreshThread();                // ← refresh after edit
-      if (typeof onSuccess === "function") onSuccess();
-      loadThreads();
-    } catch (err) {
-      alert("Failed to edit comment");
-    }
-  };
-
-  /* ========================= VOTE ========================= */
-  const handleVote = async (type, id, value) => {
-    try {
-      await vote(type, id, value);
-
-      // If we are inside a thread, refresh it to get updated scores
-      if (selectedThread) {
-        await refreshThread();
-      }
-      // Always refresh thread list scores
-      loadThreads();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  /* ========================= DELETE ========================= */
-  const handleDeleteThread = async () => {
+  /* ========================= DELETE FROM LIST ========================= */
+  const handleDeleteFromList = async (threadId) => {
     if (!window.confirm("Delete this thread?")) return;
     try {
-      await deleteThread(selectedThread._id);
-      setSelectedThread(null);
+      await deleteThread(threadId);
       loadThreads();
     } catch (err) {
-      alert(err.message || "Delete failed");
+      alert(err?.message || "Delete failed");
+      console.error(err);
     }
   };
 
-  const handleDeleteComment = async (id) => {
-    if (!window.confirm("Delete this comment?")) return;
-    try {
-      await deleteComment(id);
-      await refreshThread();               // ← refresh after delete
-      loadThreads();
-    } catch (err) {
-      alert(err.message || "Delete failed");
-    }
+  /* ========================= NAVIGATION HELPERS ========================= */
+  const openThread = (id) => {
+    if (!id) return;
+    navigate(`/forum/${id}`);
   };
-
-  /* ========================= EDIT THREAD ========================= */
-  const startEditThread = () => {
-    setEditThreadDraft({
-      title: selectedThread.title || "",
-      content: selectedThread.content || "",
-      tags: (selectedThread.tags || []).join(", "),
-    });
-    setIsEditingThread(true);
-  };
-
-  const handleSaveThreadEdit = async () => {
-    try {
-      const tags = editThreadDraft.tags
-        ? editThreadDraft.tags.split(",").map((t) => t.trim()).filter(Boolean)
-        : [];
-      // editThread is a frontend helper (or API) – we assume it returns updated thread
-      const updated = editThread(threads, selectedThread._id, {
-        title: editThreadDraft.title,
-        content: editThreadDraft.content,
-        tags,
-      });
-      // Update local state and refresh thread to get latest data
-      setSelectedThread((prev) => ({ ...prev, ...updated }));
-      setThreads((prev) => prev.map((t) => (t._id === updated._id ? updated : t)));
-      setIsEditingThread(false);
-      // Optionally refresh from API to ensure consistency
-      await refreshThread();
-      loadThreads();
-    } catch (err) {
-      alert(err.message || "Failed to save thread");
-    }
-  };
-
-  const cancelEditThread = () => {
-    setIsEditingThread(false);
-  };
-
-  /* ========================= HELPERS ========================= */
-  const getAvatarColor = (username, offset = 0) =>
-    avatarColors[((username?.charCodeAt(0) || 0) + offset) % avatarColors.length];
-
-  const inputCls =
-    "w-full px-3.5 py-2.5 rounded-lg border border-stone-200 bg-white text-[14px] text-stone-800 outline-none transition focus:border-green-400 focus:ring-2 focus:ring-green-100 resize-none";
-
-  const getReplies = (commentId) =>
-    comments.filter((c) => c.parentComment && String(c.parentComment) === String(commentId));
 
   /* ========================= RENDER ========================= */
   return (
     <div className="min-h-screen bg-white font-sans text-stone-800">
+      {/* Optional: global header (if you have one) */}
+      {Header && <Header />}
 
-      {/* Top nav & filters (unchanged) */}
+      {/* Top nav & actions */}
       <div className="border-b border-stone-200 bg-white sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
           <div className="flex items-center gap-2 flex-1 max-w-xs bg-stone-100 rounded-full px-4 py-2 text-stone-400">
@@ -272,6 +155,7 @@ export default function ForumPage() {
         </div>
       </div>
 
+      {/* Tabs / Category */}
       <div className="border-b border-stone-200 bg-white sticky top-14 z-20">
         <div className="max-w-6xl mx-auto px-4 flex items-center gap-1">
           <div className="relative mr-2">
@@ -312,165 +196,59 @@ export default function ForumPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-0">
-        {!selectedThread && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-stone-100">
-                  <th className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-5">Topic</th>
-                  <th className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Category</th>
-                  <th className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Users</th>
-                  <th className="text-center text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Replies</th>
-                  <th className="text-center text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Views</th>
-                  <th className="text-right text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Activity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={6} className="py-16 text-center text-stone-400 text-sm">Loading…</td>
-                  </tr>
-                )}
+      {/* Thread list */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-stone-100">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-stone-100">
+                <th className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-5">Topic</th>
+                <th className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Category</th>
+                <th className="text-left text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Users</th>
+                <th className="text-center text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Replies</th>
+                <th className="text-center text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Views</th>
+                <th className="text-right text-[12px] font-semibold text-stone-400 uppercase tracking-wider py-3 px-4 whitespace-nowrap">Activity</th>
+              </tr>
+            </thead>
 
-                {!loading && threads.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-16 text-center text-stone-400 text-sm">No threads yet. Create the first one!</td>
-                  </tr>
-                )}
-
-                {threads.map((thread, i) => (
-                  <ThreadRow
-                    key={thread._id}
-                    thread={thread}
-                    onClick={handleViewThread}
-                    pinned={i === 0}
-                    currentUser={currentUser}
-                    onDelete={() => {
-                      if (!currentUser || currentUser._id !== thread.author?._id) return;
-                      if (!window.confirm("Delete this thread?")) return;
-                      deleteThread(thread._id).then(() => loadThreads()).catch(() => alert("Delete failed"));
-                    }}
-                    onEdit={() => handleViewThread(thread._id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {selectedThread && (
-          <div className="max-w-3xl mx-auto py-8">
-            <button onClick={() => setSelectedThread(null)} className="flex items-center gap-1.5 text-[13px] text-stone-400 hover:text-green-600 mb-6 transition-colors">← Back to forum</button>
-
-            <div className="mb-8">
-              <div className="flex items-start gap-3 mb-1">
-                {selectedThread.category && (
-                  <span className="flex items-center gap-1 text-[12px] text-stone-400 mt-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    {selectedThread.category}
-                  </span>
-                )}
-              </div>
-
-              {!isEditingThread ? (
-                <h1 className="text-2xl font-bold text-stone-800 mb-4 leading-tight">{selectedThread.title}</h1>
-              ) : (
-                <input className="w-full text-2xl font-bold mb-4 px-3 py-2 border rounded" value={editThreadDraft.title} onChange={(e) => setEditThreadDraft((s) => ({ ...s, title: e.target.value }))} />
+            <tbody>
+              {loading && (
+                <tr><td colSpan={6} className="py-20 text-center text-stone-400">Loading…</td></tr>
               )}
 
-              <div className="flex gap-4">
-                <div className={`w-10 h-10 rounded-full ${getAvatarColor(selectedThread.author?.username)} text-white text-[14px] font-bold flex items-center justify-center flex-shrink-0`}>
-                  {selectedThread.author?.username?.[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[13px] font-semibold text-stone-700">{selectedThread.author?.username}</span>
-                    <span className="text-[12px] text-stone-400">just now</span>
-
-                    {currentUser?._id === selectedThread.author?._id && (
-                      <>
-                        {!isEditingThread ? (
-                          <button onClick={(e) => { e.stopPropagation(); startEditThread(); }} className="ml-auto text-[12px] text-stone-400 hover:text-stone-600 transition-colors">Edit</button>
-                        ) : (
-                          <>
-                            <button onClick={(e) => { e.stopPropagation(); handleSaveThreadEdit(); }} className="ml-auto text-[12px] text-green-600 font-semibold mr-2">Save</button>
-                            <button onClick={(e) => { e.stopPropagation(); cancelEditThread(); }} className="text-[12px] text-stone-400 hover:text-stone-600 transition-colors">Cancel</button>
-                          </>
-                        )}
-
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteThread(); }} className="ml-2 text-[12px] text-stone-300 hover:text-red-400 transition-colors">Delete</button>
-                      </>
-                    )}
-                  </div>
-
-                  {!isEditingThread ? (
-                    <p className="text-[15px] text-stone-600 leading-relaxed mb-3">{selectedThread.content}</p>
-                  ) : (
-                    <textarea rows={6} className="w-full px-3.5 py-2.5 rounded-lg border border-stone-200 bg-white text-[14px] text-stone-800 outline-none transition focus:border-green-400 focus:ring-2 focus:ring-green-100 resize-none mb-3" value={editThreadDraft.content} onChange={(e) => setEditThreadDraft((s) => ({ ...s, content: e.target.value }))} />
-                  )}
-
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => handleVote("thread", selectedThread._id, 1)} className="flex items-center gap-1 text-[12px] text-stone-400 hover:text-green-600 transition-colors">♥ {selectedThread.score ?? 0}</button>
-                    <button className="text-[12px] text-stone-400 hover:text-stone-600 transition-colors">Share</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-stone-100 mb-2" />
-
-            <div className="flex items-center justify-between py-3 mb-2">
-              <span className="text-[13px] font-semibold text-stone-500 uppercase tracking-wider">
-                {comments.filter(c => !c.parentComment).length} {comments.filter(c => !c.parentComment).length === 1 ? "Reply" : "Replies"}
-              </span>
-            </div>
-
-            <div className="mb-6">
-              {comments.filter(c => !c.parentComment).length === 0 && (
-                <p className="text-center text-stone-400 text-sm py-8">No replies yet — be the first to reply!</p>
+              {!loading && threads.length === 0 && (
+                <tr><td colSpan={6} className="py-20 text-center text-stone-400">No threads yet. Create the first one!</td></tr>
               )}
 
-              {comments
-                .filter((c) => !c.parentComment)
-                .map((comment) => (
-                  <CommentCard
-                    key={comment._id}
-                    comment={comment}
-                    currentUser={currentUser}
-                    onVote={handleVote}
-                    onDelete={handleDeleteComment}
-                    onReply={handleReplyToComment}
-                    onEdit={handleEditComment}
-                    getReplies={getReplies}
-                  />
-                ))}
-            </div>
-
-            <div className="border border-stone-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-2 bg-stone-50 border-b border-stone-200 flex items-center gap-2">
-                <span className="text-[12px] font-semibold text-stone-500 uppercase tracking-wider">Reply</span>
-              </div>
-              <form onSubmit={handleAddComment}>
-                <textarea
-                  className="w-full px-4 py-3 text-[14px] text-stone-700 outline-none resize-none bg-white placeholder-stone-300"
-                  placeholder="Write your reply…"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  rows={4}
+              {!loading && threads.map((thread, i) => (
+                <ThreadRow
+                  key={thread._id}
+                  thread={thread}
+                  pinned={i === 0}
+                  currentUser={currentUser}
+                  // ThreadRow calls onClick(thread._id) — we navigate to thread page
+                  onClick={(id) => openThread(id)}
+                  // Edit should also navigate to thread detail for full editing UI
+                  onEdit={(t) => {
+                    // ThreadRow sometimes passes object or id — normalize
+                    const id = typeof t === "string" ? t : (t?._id || t?.id || thread._id);
+                    openThread(id);
+                  }}
+                  // Delete uses our handler with confirmation
+                  onDelete={(id) => handleDeleteFromList(id)}
                 />
-                <div className="px-4 py-3 bg-stone-50 border-t border-stone-200 flex justify-end">
-                  <button type="submit" className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-[13px] font-semibold rounded-lg transition-colors">Post Reply</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* CREATE MODAL (unchanged besides tags mapping) */}
+      {/* CREATE MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+          onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
               <h2 className="text-[16px] font-bold text-stone-800">Create New Topic</h2>
