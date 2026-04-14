@@ -320,6 +320,10 @@ const forumRoutes = require("./routes/forumRoutes");
 const paymentRoutes = require("./routes/PaymentRoutes");
 const adminPaymentRoutes = require("./routes/adminPayments");
 
+///CHATBOT
+// const chatRoutes = require("./routes/chatbotRoutes");
+// const chatbotProductRoutes = require("./routes/chatbotProductRoutes");
+
 // ---------------- EXPRESS APP ----------------
 const app = express();
 
@@ -447,10 +451,16 @@ app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin", adminReportRoutes);
 app.use("/api/admins", adminRoutes);
 app.use("/api/admin/products", adminProducts);
-app.use("/api/admin/forum", adminForumRoutes); // ✅ ADDED HERE
+app.use("/api/admin/forum", adminForumRoutes); 
 app.use("/api/departments", departmentRoutes);
 app.use("/api/admin-users", adminUserRoutes);
 app.use("/api/modules", moduleRoutes);
+
+// ==================================================
+// ================= CHAT BOT =======================
+// ==================================================
+// app.use("/api/chat", chatRoutes);
+// app.use("/api/products/chatbot", chatbotProductRoutes); // add this before any generic /api/products route
 
 // ---------------- DEFAULT ROUTE ----------------
 app.get("/", (req, res) => {

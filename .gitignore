@@ -1,6 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+rag-service/venv/
+
 # Environment variables
 .env
 .env.*
+
+# Vector DB
+vectorstore/
+*.pkl
 
 # Logs
 logs
