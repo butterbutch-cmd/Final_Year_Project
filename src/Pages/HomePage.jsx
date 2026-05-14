@@ -166,6 +166,7 @@ export default function HomePage() {
       </div>
 
       {/* ── Product sections ── */}
+      <ProductSection title="For You" type="recommendation" />
       <ProductSection title="Trending Plants" filterKey="trending" />
       <ProductSection title="On Sale" filterKey="onSale" />
       <ProductSection title="Top Picks" filterKey="topPick" />

@@ -121,6 +121,7 @@ import Failure from "./Payment/Components/Failure";
 import ForumPage from "./Pages/ForumPage";
 import ThreadPage from "./Pages/ThreadPage";
 import Chatbot from "./components/Chatbot"; // ✅ Added Chatbot
+import NotificationPage from "./Pages/NotificationPage";
 import "./App.css";
 
 export default function App() {
@@ -162,6 +163,16 @@ export default function App() {
                 </UserProtectedRoute>
               }
             />
+
+            <Route
+              path="/notification"
+              element={
+                <UserProtectedRoute>
+                    <NotificationPage/>
+                </UserProtectedRoute>
+              }
+            />
+
             <Route
               path="/wishlist"
               element={

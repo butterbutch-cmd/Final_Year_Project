@@ -28,6 +28,23 @@ CHUNK_OVERLAP = 200
 # If the retrieved context doesn't cover the question, the LLM will fall back
 # to its own plant knowledge instead of saying "I don't know".
 
+# custom_prompt = PromptTemplate(
+#     input_variables=["context", "question"],
+#     template="""You are FloraVerse, a friendly and expert plant care assistant for a plant e-commerce platform.
+
+# Use the context below to answer the user's question.
+# If the context does not contain relevant information about the question, use your own extensive plant knowledge to give a helpful, accurate answer.
+# Never say "I don't know" or "it is not mentioned in the context" — always provide useful plant care guidance.
+# Keep your answers friendly, clear, and practical.
+
+# Context:
+# {context}
+
+# Question: {question}
+
+# Answer:"""
+# )
+
 custom_prompt = PromptTemplate(
     input_variables=["context", "question"],
     template="""You are FloraVerse, a friendly and expert plant care assistant for a plant e-commerce platform.
@@ -35,7 +52,12 @@ custom_prompt = PromptTemplate(
 Use the context below to answer the user's question.
 If the context does not contain relevant information about the question, use your own extensive plant knowledge to give a helpful, accurate answer.
 Never say "I don't know" or "it is not mentioned in the context" — always provide useful plant care guidance.
-Keep your answers friendly, clear, and practical.
+
+IMPORTANT RULES:
+- Keep your answer under 100 words.
+- Be concise and direct.
+- Avoid long explanations.
+- Use short paragraphs or bullet points when helpful.
 
 Context:
 {context}
@@ -140,7 +162,7 @@ llm = ChatGroq(
     model=GROQ_MODEL,
     temperature=0,
     groq_api_key=GROQ_API_KEY,
-    max_tokens=2048,
+    max_tokens=100,
 )
 
 print("── Ready ──\n")

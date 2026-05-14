@@ -4,6 +4,8 @@
   const bcrypt = require("bcrypt");
   const jwt = require("jsonwebtoken");
   const admin = require("../config/firebaseAdmin"); // Firebase Admin SDK
+  const sendNotification = require("../utils/sendNotification");
+  const sendEmail = require("../utils/sendEmail");
 
   /* =========================
     NORMAL LOGIN
@@ -201,7 +203,6 @@ router.patch("/set-password", auth, async (req, res) => {
   /* =========================
     CHANGE PASSWORD
   ========================= */
-
 router.patch("/change-password", auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -226,14 +227,53 @@ router.patch("/change-password", auth, async (req, res) => {
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
 
+    /* ===============================
+       1. WEBSITE NOTIFICATION
+    =============================== */
+    await sendNotification({
+      user: user._id,
+      title: "Password changed",
+      message:
+        "Your password was changed successfully. If this wasn't you, secure your account immediately.",
+      type: "password_changed",
+      link: "/profile",
+    });
+
+    /* ===============================
+       2. EMAIL
+    =============================== */
+    await sendEmail({
+      to: user.email,
+      subject: "Password Changed - FloraVerse",
+      text: "Your password was changed successfully.",
+      html: `
+        <div style="font-family: Arial; padding:20px">
+          <h2>Password Changed</h2>
+          <p>Your FloraVerse account password was changed.</p>
+
+          <p>If this wasn't you, please secure your account immediately.</p>
+
+          <a href="http://localhost:5173/profile"
+             style="
+              display:inline-block;
+              padding:10px 16px;
+              background:#2d4a2d;
+              color:white;
+              text-decoration:none;
+              border-radius:6px;
+              margin-top:10px;
+             ">
+             Go to Profile
+          </a>
+        </div>
+      `,
+    });
+
     res.json({ message: "Password updated successfully" });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
-
-
   module.exports = router;

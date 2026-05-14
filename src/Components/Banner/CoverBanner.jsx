@@ -57,7 +57,7 @@ export default function CoverBanner({
       <div className="absolute left-14 top-1/2 -translate-y-1/2 -rotate-90 flex items-center gap-3 z-[3] opacity-60 max-lg:hidden">
         <span className="block w-10 h-px bg-[#f7f4ee]/60" />
         <span className="text-[10px] tracking-[0.22em] uppercase text-[#f7f4ee]/80 whitespace-nowrap" style={sans}>
-          EST. 2024
+          EST. 2026
         </span>
         <span className="block w-10 h-px bg-[#f7f4ee]/60" />
       </div>
