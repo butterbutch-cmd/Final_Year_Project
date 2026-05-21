@@ -14,6 +14,7 @@ router.post("/", auth, async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
+    ///check if the product already exists in the cart, if it does update the quantity and price otherwise add new item to cart
     const existingItem = user.cart.find(
       (item) => item.product.toString() === productId
     );

@@ -1,126 +1,3 @@
-// // // // Final_Year_Project/src/Components/ProductSection.jsx
-// // // import { useEffect, useState } from "react";
-// // // import PlantCard from "./ProductCard/PlantCard";
-// // // import { getProducts } from "../services/publicAPI";
-// // // import { Link } from "react-router-dom";
-
-// // // const ProductSection = ({ title, filterKey }) => {
-// // //   const [products, setProducts] = useState([]);
-
-// // //   useEffect(() => {
-// // //     getProducts().then((data) => {
-// // //       if (filterKey) {
-// // //         setProducts(data.filter((p) => p[filterKey]));
-// // //       } else {
-// // //         setProducts(data);
-// // //       }
-// // //     });
-// // //   }, [filterKey]);
-
-// // //   return (
-// // //     <section className="my-8 px-[55px]">
-// // //       <h2 className="text-3xl font-bold mb-6">{title}</h2>
-
-// // //       {/* ONLY SHOW FIRST 4 PRODUCTS */}
-// // //       <div
-// // //         className="
-// // //           grid
-// // //           grid-cols-1
-// // //           sm:grid-cols-2
-// // //           md:grid-cols-2
-// // //           lg:grid-cols-2
-// // //           xl:grid-cols-4
-// // //           gap-10
-// // //         "
-// // //       >
-// // //         {products.slice(0, 4).map((product) => (
-// // //           <Link key={product._id} to={`/product/${product._id}`}>
-// // //             <PlantCard
-// // //               {...product}
-// // //               image={product.image1 || "/fallback-image.png"} // use image1 as main
-// // //             />
-// // //           </Link>
-// // //         ))}
-// // //       </div>
-// // //     </section>
-// // //   );
-// // // };
-
-// // // export default ProductSection;
-
-// // import { useEffect, useState } from "react";
-// // import PlantCard from "./ProductCard/PlantCard";
-// // import { getProducts, getRecommendations } from "../services/publicAPI";
-// // import { Link } from "react-router-dom";
-// // import { ArrowRight } from "lucide-react";
-
-// // const serif = { fontFamily: "'Cormorant Garamond', serif" };
-// // const sans  = { fontFamily: "'DM Sans', sans-serif" };
-
-// // const ProductSection = ({ title, filterKey }) => {
-// //   const [products, setProducts] = useState([]);
-// //   const [visible, setVisible]   = useState(false);
-
-// //   useEffect(() => {
-// //     getProducts().then((data) => {
-// //       setProducts(filterKey ? data.filter((p) => p[filterKey]) : data);
-// //       setTimeout(() => setVisible(true), 80);
-// //     });
-// //   }, [filterKey]);
-
-// //   return (
-// //     <section className="px-14 py-20 border-b border-[#2d4a2d]/10 last:border-b-0 max-lg:px-10 max-md:px-5 max-md:py-12">
-
-// //       {/* Section header */}
-// //       <div className="flex items-end justify-between mb-12">
-// //         <div className="flex flex-col gap-1.5">
-// //           <span className="text-[11px] tracking-[0.2em] uppercase text-[#7a9e7e]" style={sans}>
-// //             — Collection
-// //           </span>
-// //           <h2
-// //             className="text-[40px] font-light text-[#1a3320] m-0 leading-tight max-md:text-3xl"
-// //             style={{ ...serif, letterSpacing: "-0.01em" }}
-// //           >
-// //             {title}
-// //           </h2>
-// //         </div>
-
-// //         <Link
-// //           to="/pots"
-// //           className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.1em] uppercase text-[#2d4a2d] no-underline border-b border-[#2d4a2d] pb-0.5 hover:opacity-60 transition-all duration-200 hover:gap-2.5 whitespace-nowrap"
-// //           style={sans}
-// //         >
-// //           View all <ArrowRight size={13} />
-// //         </Link>
-// //       </div>
-
-// //       {/* Grid */}
-// //       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-7">
-// //         {products.slice(0, 4).map((product, i) => (
-// //           <Link
-// //             key={product._id}
-// //             to={`/product/${product._id}`}
-// //             className="block no-underline"
-// //             style={{
-// //               opacity: visible ? 1 : 0,
-// //               transform: visible ? "translateY(0)" : "translateY(16px)",
-// //               transition: `opacity 0.5s ease ${i * 0.1}s, transform 0.5s ease ${i * 0.1}s`,
-// //             }}
-// //           >
-// //             <PlantCard
-// //               {...product}
-// //               image={product.image1 || "/fallback-image.png"}
-// //             />
-// //           </Link>
-// //         ))}
-// //       </div>
-// //     </section>
-// //   );
-// // };
-
-// // export default ProductSection;
-
-
 // import { useEffect, useState } from "react";
 // import PlantCard from "./ProductCard/PlantCard";
 // import { getProducts, getRecommendations } from "../services/publicAPI";
@@ -130,52 +7,58 @@
 // const serif = { fontFamily: "'Cormorant Garamond', serif" };
 // const sans  = { fontFamily: "'DM Sans', sans-serif" };
 
-// const ProductSection = ({ title, filterKey }) => {
+// const ProductSection = ({ title, filterKey, type }) => {
 //   const [products, setProducts] = useState([]);
 //   const [visible, setVisible]   = useState(false);
 
 // useEffect(() => {
 //   const token = localStorage.getItem("token");
 
-//   console.log("Token from localStorage:", token);
+//   console.log("Section:", title);
+//   console.log("Type:", type);
+//   console.log("Token:", token);
 
-//   if (token) {
+//   // =============================
+//   // FOR YOU (RECOMMENDATIONS)
+//   // =============================
+//   if (type === "recommendation" && token) {
 //     try {
 //       const payload = JSON.parse(atob(token.split(".")[1]));
 //       const userId = payload._id;
 
-//       console.log("Decoded userId:", userId);
 //       console.log("✅ Using recommendations API");
+//       console.log("UserId:", userId);
 
 //       getRecommendations(userId).then((data) => {
-//         console.log("Recommended products:", data);
+//         console.log("Recommended:", data);
 //         setProducts(data);
 //         setTimeout(() => setVisible(true), 80);
 //       });
 
+//       return;
+
 //     } catch (err) {
-//       console.log("Token decode failed, fallback to default");
-
-//       getProducts().then((data) => {
-//         setProducts(
-//           filterKey ? data.filter((p) => p[filterKey]) : data
-//         );
-//         setTimeout(() => setVisible(true), 80);
-//       });
+//       console.log("Token decode failed → fallback");
 //     }
-
-//   } else {
-//     console.log("⚠️ No token → using default products");
-
-//     getProducts().then((data) => {
-//       setProducts(
-//         filterKey ? data.filter((p) => p[filterKey]) : data
-//       );
-//       setTimeout(() => setVisible(true), 80);
-//     });
 //   }
 
-// }, [filterKey]);
+//   // =============================
+//   // DEFAULT PRODUCTS
+//   // =============================
+//   console.log("Using default products");
+
+//   getProducts().then((data) => {
+//     const filtered = filterKey
+//       ? data.filter((p) => p[filterKey])
+//       : data;
+
+//     console.log("Filtered:", filtered);
+
+//     setProducts(filtered);
+//     setTimeout(() => setVisible(true), 80);
+//   });
+
+// }, [filterKey, type, title]);
 
 //   return (
 //     <section className="px-14 py-20 border-b border-[#2d4a2d]/10 last:border-b-0 max-lg:px-10 max-md:px-5 max-md:py-12">
@@ -227,7 +110,6 @@
 
 // export default ProductSection;
 
-
 import { useEffect, useState } from "react";
 import PlantCard from "./ProductCard/PlantCard";
 import { getProducts, getRecommendations } from "../services/publicAPI";
@@ -235,67 +117,65 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
 const serif = { fontFamily: "'Cormorant Garamond', serif" };
-const sans  = { fontFamily: "'DM Sans', sans-serif" };
+const sans = { fontFamily: "'DM Sans', sans-serif" };
 
 const ProductSection = ({ title, filterKey, type }) => {
   const [products, setProducts] = useState([]);
-  const [visible, setVisible]   = useState(false);
+  const [visible, setVisible] = useState(false);
 
-useEffect(() => {
-  const token = localStorage.getItem("token");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
 
-  console.log("Section:", title);
-  console.log("Type:", type);
-  console.log("Token:", token);
+    console.log("Section:", title);
+    console.log("Type:", type);
+    console.log("Token:", token);
 
-  // =============================
-  // FOR YOU (RECOMMENDATIONS)
-  // =============================
-  if (type === "recommendation" && token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const userId = payload._id;
+    // =============================
+    // FOR YOU (RECOMMENDATIONS)
+    // =============================
+    if (type === "recommendation" && token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const userId = payload._id;
 
-      console.log("✅ Using recommendations API");
-      console.log("UserId:", userId);
+        console.log("✅ Using recommendations API");
+        console.log("UserId:", userId);
 
-      getRecommendations(userId).then((data) => {
-        console.log("Recommended:", data);
-        setProducts(data);
-        setTimeout(() => setVisible(true), 80);
-      });
+        getRecommendations(userId).then((data) => {
+          console.log("Recommended:", data);
+          setProducts(data);
+          setTimeout(() => setVisible(true), 80);
+        });
 
-      return;
-
-    } catch (err) {
-      console.log("Token decode failed → fallback");
+        return;
+      } catch (err) {
+        console.log("Token decode failed → fallback");
+      }
     }
-  }
 
-  // =============================
-  // DEFAULT PRODUCTS
-  // =============================
-  console.log("Using default products");
+    // =============================
+    // DEFAULT PRODUCTS
+    // =============================
+    console.log("Using default products");
 
-  getProducts().then((data) => {
-    const filtered = filterKey
-      ? data.filter((p) => p[filterKey])
-      : data;
+    getProducts().then((data) => {
+      const filtered = filterKey ? data.filter((p) => p[filterKey]) : data;
 
-    console.log("Filtered:", filtered);
+      console.log("Filtered:", filtered);
 
-    setProducts(filtered);
-    setTimeout(() => setVisible(true), 80);
-  });
-
-}, [filterKey, type, title]);
+      setProducts(filtered);
+      setTimeout(() => setVisible(true), 80);
+    });
+  }, [filterKey, type, title]);
 
   return (
     <section className="px-14 py-20 border-b border-[#2d4a2d]/10 last:border-b-0 max-lg:px-10 max-md:px-5 max-md:py-12">
-
       <div className="flex items-end justify-between mb-12">
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] tracking-[0.2em] uppercase text-[#7a9e7e]" style={sans}>
+          <span
+            className="text-[11px] tracking-[0.2em] uppercase text-[#7a9e7e]"
+            style={sans}
+          >
             — Collection
           </span>
           <h2
@@ -328,8 +208,13 @@ useEffect(() => {
             }}
           >
             <PlantCard
-              {...product}
+              productId={product._id}
+              name={product.name}
               image={product.image1 || "/fallback-image.png"}
+              price={product.price}
+              oldPrice={product.oldPrice}
+              subtitle={product.subtitle}
+              onSale={product.onSale}
             />
           </Link>
         ))}

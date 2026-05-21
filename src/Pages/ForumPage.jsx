@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../Components/Header/Header";
+import Footer from "../Components/Header/Footer";
 import ThreadRow from "../Components/Forum/ThreadRow";
 import { jwtDecode } from "jwt-decode";
 import { createThread, getThreads, deleteThread } from "../services/forumAPI";
@@ -568,6 +569,7 @@ export default function ForumPage() {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }

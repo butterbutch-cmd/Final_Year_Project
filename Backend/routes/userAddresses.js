@@ -16,6 +16,7 @@ router.get("/", auth, async (req, res) => {
 // ===================== ADD ADDRESS =====================
 router.post("/", auth, async (req, res) => {
   try {
+    ///query to find the user by id 
     const user = await User.findById(req.user._id);
 
     const { street, city, postalCode, state, country, isDefault } = req.body;
@@ -25,7 +26,7 @@ router.post("/", auth, async (req, res) => {
         message: "Street, city, and postal code are required",
       });
     }
-
+    //checking if new address is set as default then update other address to false
     if (isDefault) {
       user.addresses.forEach(addr => (addr.isDefault = false));
     }
@@ -38,7 +39,6 @@ router.post("/", auth, async (req, res) => {
       country: country || "Nepal",
       isDefault: isDefault || false,
     };
-
     user.addresses.push(newAddress);
     await user.save();
 
@@ -69,7 +69,7 @@ router.patch("/:id/default", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     user.addresses.forEach(addr => {
-      addr.isDefault = addr._id.toString() === req.params.id;
+      addr.isDefault = addr._id.toString() === req.params.id; 
     });
     await user.save();
     res.json(user.addresses);

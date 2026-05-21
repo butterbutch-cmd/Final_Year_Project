@@ -21,11 +21,13 @@ const reviewRoutes = require("./routes/reviewRoutes");
 // ADMIN AUTH & MANAGEMENT
 const adminAuthRoutes = require("./routes/adminAuth");
 const adminRoutes = require("./routes/adminRoutes"); // user manager
+const adminDashboardRoutes = require("./routes/adminDashboardRoutes");// dashboard stats
 const departmentRoutes = require("./routes/department.routes");
 const adminUserRoutes = require("./routes/adminUser.routes");
 const adminReportRoutes = require("./routes/adminReportRoutes");
-const adminForumRoutes = require("./routes/adminForumRoutes"); // ✅ ADDED
+const adminForumRoutes = require("./routes/adminForumRoutes"); 
 const moduleRoutes = require("./routes/moduleRoutes");
+
 
 // USER FEATURES
 const userAddressRoutes = require("./routes/userAddresses");
@@ -40,6 +42,9 @@ const adminPaymentRoutes = require("./routes/adminPayments");
 
 ////NOTIFICATION
 const notificationRoutes = require("./routes/notificationRoutes");
+
+///PLANT RECOGNITION
+const predictRoute = require("./routes/predictRoute");
 
 // ---------------- EXPRESS APP ----------------
 const app = express();
@@ -171,6 +176,7 @@ app.use("/api/admin/payments", adminPaymentRoutes);
 // ================= ADMIN ROUTES ===================
 // ==================================================
 app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin/dashboard", adminDashboardRoutes);// dashboard stats
 app.use("/api/admin", adminReportRoutes);
 app.use("/api/admins", adminRoutes);
 app.use("/api/admin/products", adminProducts);
@@ -185,6 +191,12 @@ app.use("/api/modules", moduleRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 app.use('/api/chatbot', require('./routes/chatbot'));
+
+// ==================================================
+// ================= PLANT RECOGNITION ==============
+// ==================================================
+app.use("/api/predict", predictRoute);
+
 
 // ---------------- DEFAULT ROUTE ----------------
 app.get("/", (req, res) => {

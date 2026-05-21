@@ -8,7 +8,6 @@
 export default function VariantSelector({ selectedPot, setSelectedPot, potOptions = null }) {
   const defaultOptions = [
     { id: "nursery", label: "Nursery Pot", price: 0 },
-    { id: "ceramic", label: "Ceramic Pot", price: 250 },
   ];
 
   const options = potOptions && potOptions.length ? potOptions : defaultOptions;

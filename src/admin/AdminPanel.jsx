@@ -12,7 +12,7 @@
 
 // // const AdminPanel = () => {
 // //   const [activePage, setActivePage] = useState("home");
-// //   const [user, setUser] = useState(null); // stores admin info & permissions
+// //   const [user, setUser] = useState(null);
 // //   const [loading, setLoading] = useState(true);
 
 // //   useEffect(() => {
@@ -31,35 +31,46 @@
 // //     fetchProfile();
 // //   }, []);
 
+// //   const hasPermission = (perm) => !!perm;
+
 // //   const renderPage = () => {
 // //     if (loading) return <div>Loading...</div>;
 // //     if (!user) return <div>Access Denied</div>;
 
 // //     const { role, permissions } = user;
+// //     const isSuperAdmin = role === "super_admin"; // ✅ reusable flag
 
 // //     switch (activePage) {
 // //       case "inventory":
-// //         if (!permissions.products?.view) return <div>Access Denied</div>;
+// //         if (!isSuperAdmin && !hasPermission(permissions.products?.view))
+// //           return <div>Access Denied</div>;
 // //         return <Inventory />;
 
 // //       case "users":
-// //         if (!permissions.users?.view) return <div>Access Denied</div>;
+// //         if (!isSuperAdmin && !hasPermission(permissions.users?.view))
+// //           return <div>Access Denied</div>;
 // //         return <UserManager />;
 
 // //       case "roles":
-// //         if (role !== "super_admin") return <div>Access Denied</div>;
+// //         if (!isSuperAdmin) return <div>Access Denied</div>;
 // //         return <AdminRoles />;
 
 // //       case "content":
-// //         if (!permissions.content?.view) return <div>Access Denied</div>;
+// //         if (!isSuperAdmin && !hasPermission(permissions.content?.view))
+// //           return <div>Access Denied</div>;
 // //         return <ContentManager />;
-      
+
 // //       case "payment":
-// //         if (!permissions.payments?.view) return <div>Access Denied</div>
-// //         return <Payment/>
-      
+// //         if (!isSuperAdmin && !hasPermission(permissions.payments?.view))
+// //           return <div>Access Denied</div>;
+// //         return <Payment />;
+
 // //       case "community":
-// //         if(!permissions)
+// //         // ✅ FIXED: super_admin bypasses permission check
+// //         if (!isSuperAdmin && !hasPermission(permissions.community?.view))
+// //           return <div>Access Denied</div>;
+// //         return <CommunityManagement user={user} />;
+
 // //       default:
 // //         return <AdminHome />;
 // //     }
@@ -91,7 +102,7 @@
 // import AdminRoles from "./pages/AdminRoles";
 // import ContentManager from "./pages/ContentManager";
 // import Payment from "./pages/Payment";
-// import CommunityManagement from "./pages/CommunityManagement"; // ✅ NEW
+// import CommunityManagement from "./pages/CommunityManagement";
 
 // const AdminPanel = () => {
 //   const [activePage, setActivePage] = useState("home");
@@ -121,39 +132,49 @@
 //     if (!user) return <div>Access Denied</div>;
 
 //     const { role, permissions } = user;
+//     const isSuperAdmin = role === "super_admin";
 
 //     switch (activePage) {
+//       case "home":
+//         if (!isSuperAdmin) return <div>Access Denied</div>;
+//         return <AdminHome />;
+
 //       case "inventory":
-//         if (!hasPermission(permissions.products?.view))
+//         if (!isSuperAdmin && !hasPermission(permissions.products?.view)) {
 //           return <div>Access Denied</div>;
+//         }
 //         return <Inventory />;
 
 //       case "users":
-//         if (!hasPermission(permissions.users?.view))
+//         if (!isSuperAdmin && !hasPermission(permissions.users?.view)) {
 //           return <div>Access Denied</div>;
+//         }
 //         return <UserManager />;
 
 //       case "roles":
-//         if (role !== "super_admin") return <div>Access Denied</div>;
+//         if (!isSuperAdmin) return <div>Access Denied</div>;
 //         return <AdminRoles />;
 
 //       case "content":
-//         if (!hasPermission(permissions.content?.view))
+//         if (!isSuperAdmin && !hasPermission(permissions.content?.view)) {
 //           return <div>Access Denied</div>;
+//         }
 //         return <ContentManager />;
 
 //       case "payment":
-//         if (!hasPermission(permissions.payments?.view))
+//         if (!isSuperAdmin && !hasPermission(permissions.payments?.view)) {
 //           return <div>Access Denied</div>;
+//         }
 //         return <Payment />;
 
 //       case "community":
-//         if (!hasPermission(permissions.community?.view))
+//         if (!isSuperAdmin && !hasPermission(permissions.community?.view)) {
 //           return <div>Access Denied</div>;
+//         }
 //         return <CommunityManagement user={user} />;
 
 //       default:
-//         return <AdminHome />;
+//         return <div>Access Denied</div>;
 //     }
 //   };
 
@@ -171,6 +192,7 @@
 // };
 
 // export default AdminPanel;
+
 
 import { useState, useEffect } from "react";
 import { getMyAdminProfile } from "../services/adminAPI";
@@ -212,17 +234,23 @@ const AdminPanel = () => {
     if (!user) return <div>Access Denied</div>;
 
     const { role, permissions } = user;
-    const isSuperAdmin = role === "super_admin"; // ✅ reusable flag
+    const isSuperAdmin = role === "super_admin";
 
     switch (activePage) {
+      case "home":
+        if (!isSuperAdmin) return <div>Access Denied</div>;
+        return <AdminHome />;
+
       case "inventory":
-        if (!isSuperAdmin && !hasPermission(permissions.products?.view))
+        if (!isSuperAdmin && !hasPermission(permissions.products?.view)) {
           return <div>Access Denied</div>;
+        }
         return <Inventory />;
 
       case "users":
-        if (!isSuperAdmin && !hasPermission(permissions.users?.view))
+        if (!isSuperAdmin && !hasPermission(permissions.users?.view)) {
           return <div>Access Denied</div>;
+        }
         return <UserManager />;
 
       case "roles":
@@ -230,23 +258,25 @@ const AdminPanel = () => {
         return <AdminRoles />;
 
       case "content":
-        if (!isSuperAdmin && !hasPermission(permissions.content?.view))
+        if (!isSuperAdmin && !hasPermission(permissions.content?.view)) {
           return <div>Access Denied</div>;
+        }
         return <ContentManager />;
 
       case "payment":
-        if (!isSuperAdmin && !hasPermission(permissions.payments?.view))
+        if (!isSuperAdmin && !hasPermission(permissions.payments?.view)) {
           return <div>Access Denied</div>;
+        }
         return <Payment />;
 
       case "community":
-        // ✅ FIXED: super_admin bypasses permission check
-        if (!isSuperAdmin && !hasPermission(permissions.community?.view))
+        if (!isSuperAdmin && !hasPermission(permissions.community?.view)) {
           return <div>Access Denied</div>;
+        }
         return <CommunityManagement user={user} />;
 
       default:
-        return <AdminHome />;
+        return <div>Access Denied</div>;
     }
   };
 
