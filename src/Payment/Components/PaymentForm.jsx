@@ -10,7 +10,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import Header from "/FYP/Final_Year_Project/src/Components/Header/Header.jsx";
+import Header from "../Components/Header/Header.jsx";
 import esewaLogo from "/FYP/Final_Year_Project/src/assets/esewa.png";
 
 const serif = { fontFamily: "'Cormorant Garamond', serif" };
