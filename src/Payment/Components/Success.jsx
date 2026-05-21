@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { base64Decode } from "../utils/helpers";
-import Header from "/FYP/Final_Year_Project/src/Components/Header/Header";
+import Header from "/FYP/Final_Year_Project/src/Components/Header/Header.jsx";
 import { Check } from "lucide-react";
 
 const serif = { fontFamily: "'Cormorant Garamond', serif" };
