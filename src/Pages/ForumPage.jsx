@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../Components/Header/Header";
 import Footer from "../Components/Header/Footer";
-import ThreadRow from "../Components/Forum/ThreadRow";
+import ThreadRow from "../Components/Forum/Threadrow.jsx";
 import { jwtDecode } from "jwt-decode";
 import { createThread, getThreads, deleteThread } from "../services/forumAPI";
 import { fetchNotifications, markOneRead, markAllRead, deleteNotification } from "../services/notificationAPI";
