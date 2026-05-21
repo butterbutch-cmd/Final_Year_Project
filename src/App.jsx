@@ -23,7 +23,7 @@ import Success from "./Payment/Components/Success";
 import Failure from "./Payment/Components/Failure";       
 import ForumPage from "./Pages/ForumPage";
 import ThreadPage from "./Pages/ThreadPage";
-import Chatbot from "./components/Chatbot"; 
+import Chatbot from "./Components/Chatbot"; 
 import NotificationPage from "./Pages/NotificationPage";
 import "./App.css";
 
