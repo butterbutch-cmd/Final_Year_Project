@@ -29,6 +29,7 @@ export default function LoginPage() {
     setLoginData((prev) => ({ ...prev, [name]: value }));
   };
 
+  //handle normal login form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -44,6 +45,8 @@ export default function LoginPage() {
     }
   };
 
+
+  //handle Google Sign-in
   const googleSignin = async () => {
     setError("");
     setLoading(true);
@@ -77,7 +80,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-center gap-2 mb-16">
             <span className="text-[#7a9e7e] text-sm animate-spin" style={{ animationDuration: "9s" }}>✦</span>
             <span className="text-[28px] font-semibold tracking-[0.2em] text-[#f7f4ee]" style={serif}>
-              MENDHO
+              FLORAVERSE
             </span>
           </div>
 
@@ -113,7 +116,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-12 lg:hidden">
             <span className="text-[#7a9e7e] text-xs animate-spin" style={{ animationDuration: "9s" }}>✦</span>
-            <span className="text-2xl font-semibold tracking-[0.18em] text-[#1a3320]" style={serif}>MENDHO</span>
+            <span className="text-2xl font-semibold tracking-[0.18em] text-[#1a3320]" style={serif}>FLORAVERSE</span>
           </div>
 
           {/* Heading */}

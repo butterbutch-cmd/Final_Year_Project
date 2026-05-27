@@ -10,6 +10,7 @@ import {
 } from "../../services/adminAPI";
 import { getDepartments } from "../../services/departmentAPI";
 import DepartmentModal from "../components/DepartmentModal";
+import toast from "react-hot-toast";
 
 // ================= DEFAULT PERMISSIONS (empty) =================
 const defaultPermissions = {};
@@ -58,7 +59,7 @@ const AdminRoles = () => {
       setAdmins(data || []);
     } catch (error) {
       console.error("Failed to fetch admins:", error);
-      alert("Failed to load admins");
+      toast.error ("Failed to load admins");
     }
   };
 
@@ -68,7 +69,7 @@ const AdminRoles = () => {
       setDepartments(d || []);
     } catch (error) {
       console.error("Failed to fetch departments:", error);
-      alert("Failed to load departments");
+      toast.error("Failed to load departments");
     }
   };
 
@@ -86,7 +87,7 @@ const fetchModules = async () => {
     setModules(Array.isArray(data) ? data : []);
   } catch (error) {
     console.error("Failed to fetch modules:", error);
-    alert("Failed to load permission modules");
+    toast.error("Failed to load permission modules");
   }
 };
 
@@ -203,7 +204,7 @@ const fetchModules = async () => {
     const { username, email, phoneNumber, role, department, permissions } = form;
 
     if (!username || !email || !phoneNumber) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
@@ -215,10 +216,10 @@ const fetchModules = async () => {
     try {
       if (isEditMode) {
         await updateAdmin(editingAdminId, { phoneNumber, permissions, department });
-        alert("Admin updated successfully.");
+        toast.success("Admin updated successfully.");
       } else {
         await createAdmin({ username, email, phoneNumber, role, department, permissions });
-        alert("Admin created successfully.");
+        toast.success("Admin created successfully.");
       }
 
       setShowModal(false);
@@ -226,7 +227,7 @@ const fetchModules = async () => {
       fetchAdmins();
     } catch (error) {
       console.error(isEditMode ? "Update failed:" : "Create failed:", error);
-      alert(error.message || `Failed to ${isEditMode ? "update" : "create"} admin`);
+      toast.error (error.message || `Failed to ${isEditMode ? "update" : "create"} admin`);
     }
   };
 
@@ -237,7 +238,7 @@ const fetchModules = async () => {
       setAdmins((prev) => prev.filter((item) => item._id !== id));
     } catch (error) {
       console.error("Delete failed:", error);
-      alert(error.message || "Failed to delete admin.");
+      toast.error(error.message || "Failed to delete admin.");
     }
   };
 

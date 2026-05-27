@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import UserProfileHeader from "../Components/UserProfilePageComponent/UserProfileHeader";
 import { Edit2, Info, Lock, Phone, MapPin, X, Check, User } from "lucide-react";
 import ChangePasswordModal from "../Components/UserProfilePageComponent/ChangePasswordModal";
@@ -82,7 +83,7 @@ export default function UserProfilePage() {
       setIsEditingProfile(false);
     } catch (err) {
       console.error(err);
-      alert("Could not save profile changes");
+      toast.error("Could not save profile changes");
     } finally {
       setSavingProfile(false);
     }
@@ -121,7 +122,7 @@ export default function UserProfilePage() {
       setShowAddressModal(false);
     } catch (err) {
       console.error("Error adding address:", err);
-      alert(err.message || "Failed to save address");
+      toast.error(err.message || "Failed to save address");
     }
   };
 

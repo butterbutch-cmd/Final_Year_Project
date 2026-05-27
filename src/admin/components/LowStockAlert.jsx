@@ -1,4 +1,3 @@
-// src/admin/components/LowStockAlert.jsx
 // NOTE: Named LowStockAlert (not LowStockTable) to avoid any future filename collisions.
 
 const LOW_STOCK_THRESHOLD = 5;

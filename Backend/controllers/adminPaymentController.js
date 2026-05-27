@@ -37,6 +37,7 @@ exports.updatePaymentStatus = async (req, res) => {
   if (!PAYMENT_STATUSES.includes(status))
     return res.status(400).json({ message: "Invalid status" });
 
+  ///UPDATING THE PAYMENT STATUS OF THE TRANSACTION AND THEN CHECKING IF THE TRANSACTION EXISTS OR NOT
   const txn = await Transaction.findByIdAndUpdate(
     req.params.id,
     { status },

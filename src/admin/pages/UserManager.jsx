@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Users, UserPlus, UserX, UserCheck, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -94,7 +95,7 @@ const UserManager = () => {
 
   const sendBlock = async () => {
     if (!permissions.users?.edit) return;
-    if (!blockReason.trim()) return alert("Please provide a reason");
+    if (!blockReason.trim()) return toast.error("Please provide a reason");
 
     try {
       const userId = selectedUser._id || selectedUser.id || selectedUser.userid;
@@ -103,10 +104,10 @@ const UserManager = () => {
       setBlockModalOpen(false);
       fetchUsers();
 
-      alert("User blocked and email sent");
+      toast.success("User blocked and email sent");
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to block user");
+      toast.error(err.message || "Failed to block user");
     }
   };
 
@@ -118,14 +119,14 @@ const UserManager = () => {
 
       if (user.isBlocked) {
         await unblockUser(userId);
-        alert("User unblocked and email sent");
+        toast.success("User unblocked and email sent");
         fetchUsers();
       } else {
         openBlockModal(user);
       }
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to update block status");
+      toast.error(err.message || "Failed to update block status");
     }
   };
 
@@ -143,7 +144,7 @@ const UserManager = () => {
       fetchUsers();
     } catch (err) {
       console.error(err);
-      alert("Failed to delete user");
+      toast.error("Failed to delete user");
     }
   };
 

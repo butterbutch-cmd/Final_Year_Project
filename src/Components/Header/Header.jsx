@@ -75,8 +75,10 @@ export default function Header() {
   const fetchedRef = useRef(false);
   const searchRef  = useRef(null);
 
+  
+
   // ── Load notifications ──
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async () => {///call back means
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
@@ -173,17 +175,21 @@ const handleNotifClick = async (notif) => {
     const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
   }, [loadNotifications]);
-
+  
+  /// Add shadow to header after scrolling down 20px
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20); /// add shadow after scrolling 20px
     window.addEventListener("scroll", onScroll);/// listen for scroll events
     return () => window.removeEventListener("scroll", onScroll);/// cleanup on unmount
   }, []);
 
+  /// Focus search input when searchOpen becomes true
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
 
+
+  /// Fetch cart count on mount and when "cartUpdate" event is dispatched (e.g., after adding to cart)
   useEffect(() => {
     const fetchCart = async () => {
       const token = localStorage.getItem("token");
@@ -199,10 +205,11 @@ const handleNotifClick = async (notif) => {
       }
     };
     fetchCart();
-    window.addEventListener("cartUpdate", fetchCart);
+    window.addEventListener("cartUpdated", fetchCart);
     return () => window.removeEventListener("cartUpdated", fetchCart);
   }, []);
 
+  /// Fetch user on mount (if token exists) and set in state
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
@@ -213,17 +220,20 @@ const handleNotifClick = async (notif) => {
         const res = await fetch("http://localhost:5000/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) { localStorage.removeItem("token"); return; }
+        if (!res.ok) { localStorage.removeItem("token"); return; }///
         setUser(await res.json());
       } catch { setUser(null); }
     })();
   }, []);
 
+
+  ///handle search: if closed, open it. If open, navigate to search results page with query
   const handleSearch = () => {
     if (!searchOpen) { setSearchOpen(true); return; }
     navigate(`/search?q=${searchQuery}`);
   };
 
+  /// Navigation functions for profile menu
   const goToProfile      = () => { navigate("/profile");  setShowProfileMenu(false); };
   const goToOrderHistory = () => { navigate("/orders");   setShowProfileMenu(false); };
   const logoutUser       = () => {
@@ -254,7 +264,7 @@ const handleNotifClick = async (notif) => {
           <div className="flex items-center gap-2 cursor-pointer flex-shrink-0" onClick={() => navigate("/")}>
             <span className="text-[#7a9e7e] text-xs animate-spin" style={{ animationDuration: "9s" }}>✦</span>
             <h1 className="text-2xl font-semibold tracking-[0.18em] text-[#1a3320] m-0 leading-none" style={serif}>
-              MENDHO
+              FLORAVERSE
             </h1>
           </div>
 
@@ -308,7 +318,9 @@ const handleNotifClick = async (notif) => {
               <User2 size={17} />
             </ActionBtn>
 
-            <ActionBtn onClick={() => navigate("/wishlist")}>
+            <ActionBtn
+              onClick={() => navigate(user ? "/wishlist" : "/LoginPage")}
+            >
               <Heart size={17} />
             </ActionBtn>
 
@@ -534,7 +546,7 @@ const handleNotifClick = async (notif) => {
               <X size={22} />
             </button>
             <h2 className="text-[28px] font-semibold tracking-[0.18em] text-[#1a3320] mb-8" style={serif}>
-              MENDHO
+              FLORAVERSE
             </h2>
             <ul className="list-none p-0 m-0">
               {NAV_LINKS.map(({ label, to, sale }) => (

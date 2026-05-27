@@ -7,6 +7,7 @@
   const sendNotification = require("../utils/sendNotification");
   const sendEmail = require("../utils/sendEmail");
 
+
   /* =========================
     NORMAL LOGIN
   ========================= */
@@ -28,6 +29,12 @@
       if (user.isBlocked) {
         return res.status(403).json({ message: "Your account has been blocked. Check Mail for Reason." });
       }
+
+      if (!user.isEmailVerified) {
+      return res.status(403).json({ message: "Please verify your email before logging in.",
+                                    email: user.email, // send back so frontend can redirect to verify page
+        });
+}
 
       // 🔴 Block non-regular users
       if (user.role !== "user") {
@@ -77,7 +84,7 @@
     }
 
     try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
+      const decodedToken = await admin.auth().verifyIdToken(token);/// verify token with Firebase Admin SDK
       const { uid, email, name, picture } = decodedToken;
 
       if (!email) {
@@ -86,7 +93,7 @@
 
       let user = await User.findOne({ email });
 
-      if (user && user.isBlocked) {
+      if (user && user.isBlocked) {///
         return res.status(403).json({ message: "Your account has been blocked. Contact support & Check mail for reason." });
       }
 
@@ -136,8 +143,6 @@
   /* =========================
     UPDATE CURRENT USER
   ========================= */
-
-
 router.patch("/me", auth, async (req, res) => {
   try {
     const { username, phoneNumber } = req.body;
@@ -203,9 +208,36 @@ router.patch("/set-password", auth, async (req, res) => {
   /* =========================
     CHANGE PASSWORD
   ========================= */
+const Joi = require("joi");
+
 router.patch("/change-password", auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+
+    // ─────────────────────────────────────
+    // ✅ JOI VALIDATION (INLINE)
+    // ─────────────────────────────────────
+    const schema = Joi.object({
+      currentPassword: Joi.string().required(),
+      newPassword: Joi.string()
+        .min(8)
+        .pattern(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/
+        )
+        .required()
+        .messages({
+          "string.pattern.base":
+            "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long",
+        }),
+    });
+
+    const { error } = schema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        message: error.details[0].message,
+      });
+    }
 
     const user = await User.findById(req.user._id);
 
@@ -216,15 +248,28 @@ router.patch("/change-password", auth, async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
     if (!isMatch) {
       return res.status(400).json({
         message: "Current password is incorrect",
       });
     }
 
+    // ❗ Prevent same password reuse
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        message:
+          "New password cannot be same as current password",
+      });
+    }
+
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
+
     await user.save();
 
     /* ===============================

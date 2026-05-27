@@ -45,4 +45,62 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
+// ✅ Update cart item quantity
+router.put("/update", auth, async (req, res) => {
+  try {
+    const { productId, action } = req.body;
+
+    if (!productId || !action) {
+      return res.status(400).json({ message: "Missing productId or action" });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    const item = user.cart.find(
+      (item) => item.product.toString() === productId
+    );
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    if (action === "increase") {
+      item.quantity += 1;
+    } else if (action === "decrease") {
+      item.quantity = Math.max(1, item.quantity - 1);
+    } else {
+      return res.status(400).json({ message: "Invalid action" });
+    }
+
+    await user.save();
+    res.json({ message: "Cart updated", cart: user.cart });
+  } catch (err) {
+    console.error("Cart update error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ✅ Remove item from cart
+router.delete("/remove", auth, async (req, res) => {
+  try {
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Missing productId" });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    user.cart = user.cart.filter(
+      (item) => item.product.toString() !== productId
+    );
+
+    await user.save();
+    res.json({ message: "Item removed", cart: user.cart });
+  } catch (err) {
+    console.error("Cart remove error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

@@ -7,7 +7,7 @@ const router = express.Router();
 /* GET ALL PRODUCTS (PUBLIC) */
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: 1 });
+    const products = await Product.find().sort({ createdAt: 1 });///
     res.json(products);
   } catch (error) {
     console.error("PUBLIC GET products error:", error);

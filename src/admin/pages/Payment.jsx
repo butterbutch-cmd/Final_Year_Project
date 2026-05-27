@@ -10,6 +10,7 @@ import {
   X,
   Slash,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import {
   getPayments,
@@ -22,14 +23,14 @@ import {
 import { getMyAdminProfile } from "../../services/adminAPI";
 
 const Payment = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedTxn, setSelectedTxn] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [refreshToken, setRefreshToken] = useState(0);
+  const [transactions, setTransactions] = useState([]); ///state to hold the list of transactions
+  const [loading, setLoading] = useState(false);        ///state to indicate if the transactions are being loaded
+  const [selectedTxn, setSelectedTxn] = useState(null); ///state to hold the currently selected transaction for viewing details
+  const [showDetailModal, setShowDetailModal] = useState(false); ///state to control the visibility of the transaction details modal
+  const [refreshToken, setRefreshToken] = useState(0); ///state to trigger a refresh of the transactions list after certain actions (like refund)
 
   // Permissions
-  const [permissions, setPermissions] = useState({});
+  const [permissions, setPermissions] = useState({}); 
 
   // Per-transaction action loading flags
   const [actionLoading, setActionLoading] = useState({});
@@ -84,17 +85,18 @@ const Payment = () => {
     setTxnLoading(id, true);
     try {
       const normalized = String(status).toUpperCase();
-      await updatePaymentStatus(id, normalized);
+      await updatePaymentStatus(id, normalized);///
       setTransactions((prev) =>
         prev.map((t) => (t._id === id ? { ...t, status: normalized } : t))
       );
     } catch (err) {
-      alert(err?.message || "Failed to update payment status");
+      toast.error(err?.message || "Failed to update payment status");
     } finally {
       setTxnLoading(id, false);
     }
   };
-
+  
+  ///handling the change in delivery status of a transaction by calling the updateDeliveryStatus API and updating the UI optimistically based on the response
   const handleDeliveryStatusChange = async (id, deliveryStatus) => {
     if (!permissions.payments?.edit) return;
     setTxnLoading(id, true);
@@ -119,12 +121,14 @@ const Payment = () => {
         )
       );
     } catch (err) {
-      alert(err?.message || "Failed to update delivery status");
+      toast.error(err?.message || "Failed to update delivery status");
     } finally {
       setTxnLoading(id, false);
     }
   };
 
+  
+  ///handling the refund of a transaction by calling the refundPayment API and refreshing the transactions list to reflect the changes
   const handleRefund = async (id) => {
     if (!permissions.payments?.edit) return;
     if (!window.confirm("Refund this payment?")) return;
@@ -135,7 +139,7 @@ const Payment = () => {
       // refresh list to ensure all denormalized fields update
       setRefreshToken((t) => t + 1);
     } catch (err) {
-      alert(err?.message || "Refund failed");
+      toast.error(err?.message || "Refund failed");
     } finally {
       setTxnLoading(id, false);
     }
@@ -169,7 +173,7 @@ const Payment = () => {
         )
       );
     } catch (err) {
-      alert(err?.message || "Failed to mark inactive");
+      toast.error(err?.message || "Failed to mark inactive");
     } finally {
       setTxnLoading(id, false);
     }
@@ -380,7 +384,7 @@ const Payment = () => {
                 onClick={() => {
                   // copy Txn JSON to clipboard
                   navigator.clipboard?.writeText(JSON.stringify(selectedTxn, null, 2));
-                  alert("Copied details to clipboard");
+                  toast.success("Copied details to clipboard");
                 }}
                 className="px-3 py-2 border rounded"
               >

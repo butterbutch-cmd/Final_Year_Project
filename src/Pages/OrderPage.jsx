@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import UserHeader from "../Components/UserProfilePageComponent/UserProfileHeader";
 import noImage from "../assets/no-image.png";
 import Footer from "../Components/Header/Footer";
+import toast from "react-hot-toast";
 
 const serif = { fontFamily: "'Cormorant Garamond', serif" };
 const sans = { fontFamily: "'DM Sans', sans-serif" };
@@ -13,6 +14,15 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState(null);
+
+  // ---- Modal state ----
+  const [cancelModal, setCancelModal] = useState({
+    isOpen: false,
+    orderId: null,
+    step: "input", // "input" | "confirm"
+    reason: "",
+    loading: false,
+  });
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -59,54 +69,75 @@ export default function OrdersPage() {
     order.transaction?.status === "PENDING" ||
     order.transaction?.deliveryStatus === "PENDING";
 
-  const handleCancelOrder = async (orderId) => {
-    const reason = prompt(
-      "Please enter the reason for cancelling this order:\nRefunds may take up to 12 hours."
-    );
-    if (!reason) return alert("Cancellation reason is required.");
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this order? Refunds may take up to 12 hours."
-    );
-    if (!confirmCancel) return;
+  // Open the modal instead of using prompt/confirm
+  const openCancelModal = (orderId) => {
+    setCancelModal({
+      isOpen: true,
+      orderId,
+      step: "input",
+      reason: "",
+      loading: false,
+    });
+  };
 
+  // Close the modal completely
+  const closeCancelModal = () => {
+    setCancelModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  // Handle moving from input step to confirm step
+  const proceedToConfirm = () => {
+    if (!cancelModal.reason.trim()) {
+      toast.error("Please provide a cancellation reason.");
+      return;
+    }
+    setCancelModal((prev) => ({ ...prev, step: "confirm" }));
+  };
+
+  // Final cancellation call
+  const executeCancel = async () => {
+    setCancelModal((prev) => ({ ...prev, loading: true }));
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:5000/api/user/orders/${orderId}/cancel`,
+        `http://localhost:5000/api/user/orders/${cancelModal.orderId}/cancel`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ reason }),
+          body: JSON.stringify({ reason: cancelModal.reason }),
         }
       );
       if (!res.ok) throw new Error("Failed to cancel order");
-      alert("Order cancelled successfully. Refund will be processed within 12 hours.");
+      toast.success("Order cancelled successfully. Refund will be processed within 12 hours.");
       setOrders((prev) =>
         prev.map((o) =>
-          o.orderId === orderId || o._id === orderId
+          o.orderId === cancelModal.orderId || o._id === cancelModal.orderId
             ? {
                 ...o,
                 status: "CANCELLED",
                 deliveryStatus: "CANCELLED",
-                cancellation: { reason, cancelledAt: new Date() },
+                cancellation: { reason: cancelModal.reason, cancelledAt: new Date() },
                 transaction: o.transaction
                   ? {
                       ...o.transaction,
                       status: "CANCELLED",
                       deliveryStatus: "CANCELLED",
-                      cancellation: { reason, cancelledAt: new Date() },
+                      cancellation: { reason: cancelModal.reason, cancelledAt: new Date() },
                     }
                   : null,
               }
             : o
         )
       );
+      closeCancelModal();
     } catch (err) {
       console.error("Cancel order failed:", err);
-      alert("Failed to cancel order. Please try again.");
+      toast.error("Failed to cancel order. Please try again.");
+    } finally {
+      setCancelModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -152,7 +183,6 @@ export default function OrdersPage() {
       </div>
 
       <div className="px-4 sm:px-8 py-8">
-
         {/* Loading */}
         {loading && (
           <div className="flex items-center gap-3 py-10">
@@ -287,7 +317,6 @@ export default function OrdersPage() {
                     {/* Expanded details */}
                     {isOpen && (
                       <div className="border-t border-[#2d4a2d]/8 px-4 py-4 flex flex-col gap-4">
-
                         {/* Transaction ID */}
                         {order.transaction?.transactionId && (
                           <div>
@@ -372,10 +401,10 @@ export default function OrdersPage() {
                           </div>
                         )}
 
-                        {/* Cancel Button */}
+                        {/* Cancel Button – now opens modal instead of prompt */}
                         {canCancel(order) && (
                           <button
-                            onClick={() => handleCancelOrder(order.orderId || order._id)}
+                            onClick={() => openCancelModal(order.orderId || order._id)}
                             className="self-start px-4 py-2 bg-transparent text-[#c4704a] text-[10.5px] font-medium tracking-[0.12em] uppercase border border-[#c4704a]/30 cursor-pointer rounded-sm hover:bg-[#c4704a]/5 hover:border-[#c4704a] transition-all duration-200"
                             style={sans}
                           >
@@ -438,6 +467,118 @@ export default function OrdersPage() {
           </>
         )}
       </div>
+
+      {/* ---- Cancellation Modal ---- */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+          {/* Modal backdrop click to close (when not loading) */}
+          <div
+            className="absolute inset-0"
+            onClick={cancelModal.loading ? undefined : closeCancelModal}
+          />
+
+          {/* Modal dialog */}
+          <div className="relative w-full max-w-md bg-white rounded-sm shadow-xl border border-[#2d4a2d]/10 p-6 z-10">
+            {/* Close button */}
+            {!cancelModal.loading && (
+              <button
+                onClick={closeCancelModal}
+                className="absolute top-3 right-3 text-[#8c8880] hover:text-[#1a3320] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+
+            {cancelModal.step === "input" ? (
+              <>
+                <h2 className="text-lg font-light text-[#1a3320] mb-4" style={serif}>
+                  Cancel Order
+                </h2>
+                <p className="text-[13px] text-[#8c8880] mb-4" style={sans}>
+                  Please provide a reason for cancellation. Refunds may take up to 12 hours.
+                </p>
+                <textarea
+                  value={cancelModal.reason}
+                  onChange={(e) =>
+                    setCancelModal((prev) => ({ ...prev, reason: e.target.value }))
+                  }
+                  placeholder="Enter cancellation reason..."
+                  rows={3}
+                  className="w-full border border-[#2d4a2d]/15 rounded-sm p-3 text-[13px] text-[#1a3320] placeholder:text-[#8c8880] focus:outline-none focus:border-[#2d4a2d]/50 resize-none"
+                  style={sans}
+                  disabled={cancelModal.loading}
+                />
+                <div className="flex justify-end gap-3 mt-5">
+                  <button
+                    onClick={closeCancelModal}
+                    className="px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[#8c8880] border border-[#2d4a2d]/15 rounded-sm hover:bg-[#f7f4ee] transition-colors"
+                    style={sans}
+                  >
+                    Keep Order
+                  </button>
+                  <button
+                    onClick={proceedToConfirm}
+                    className="px-4 py-2 text-[11px] uppercase tracking-[0.1em] bg-[#c4704a] text-white rounded-sm hover:bg-[#b05a3a] transition-colors disabled:opacity-50"
+                    style={sans}
+                    disabled={cancelModal.loading}
+                  >
+                    Proceed to Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-light text-[#1a3320] mb-4" style={serif}>
+                  Confirm Cancellation
+                </h2>
+                <p className="text-[13px] text-[#8c8880] mb-2" style={sans}>
+                  You are about to cancel this order for the following reason:
+                </p>
+                <div className="bg-[#f7f4ee] border border-[#2d4a2d]/10 rounded-sm p-3 mb-4">
+                  <p className="text-[13px] text-[#1a3320] italic" style={sans}>
+                    “{cancelModal.reason}”
+                  </p>
+                </div>
+                <p className="text-[12px] text-[#c4704a] mb-5" style={sans}>
+                  Refunds may take up to 12 hours. This action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() =>
+                      setCancelModal((prev) => ({ ...prev, step: "input" }))
+                    }
+                    className="px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[#8c8880] border border-[#2d4a2d]/15 rounded-sm hover:bg-[#f7f4ee] transition-colors"
+                    style={sans}
+                    disabled={cancelModal.loading}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={executeCancel}
+                    className={`px-4 py-2 text-[11px] uppercase tracking-[0.1em] bg-[#c4704a] text-white rounded-sm hover:bg-[#b05a3a] transition-colors flex items-center gap-2 disabled:opacity-50 ${
+                      cancelModal.loading ? "cursor-wait" : ""
+                    }`}
+                    style={sans}
+                    disabled={cancelModal.loading}
+                  >
+                    {cancelModal.loading ? (
+                      <>
+                        <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        Cancelling…
+                      </>
+                    ) : (
+                      "Confirm Cancel"
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

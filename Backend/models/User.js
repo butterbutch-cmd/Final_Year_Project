@@ -96,6 +96,21 @@ const userSchema = new mongoose.Schema(
       default: "local",
       required: true,
     },
+    
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    emailVerificationOtp: {
+      type: String,
+      default: null,
+    },
+
+    emailVerificationOtpExpire: {
+      type: Date,
+      default: null,
+    },
 
     firebaseUid: { type: String, default: null },
     profilePic: { type: String, default: "" },
@@ -204,11 +219,23 @@ userSchema.methods.generateAuthToken = function () {
 
 /* ==================== VALIDATIONS ==================== */
 const validateUserSignup = (data) => {
+  const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
   const schema = Joi.object({
     username: Joi.string().min(3).max(30).required(),
+
     email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
+
+    password: Joi.string()
+      .pattern(strongPasswordRegex)
+      .required()
+      .messages({
+        "string.pattern.base":
+          "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long",
+      }),
   });
+
   return schema.validate(data);
 };
 

@@ -14,32 +14,24 @@ const cartItemSchema = new mongoose.Schema({
 /* ============================= */
 /* ===== TRANSACTION SCHEMA ===== */
 /* ============================= */
+
 const transactionSchema = new mongoose.Schema(
   {
-    /* ===== USER ===== */
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-    /* ===== CUSTOMER DETAILS ===== */
     customerDetails: {
       name: { type: String, required: true },
       email: { type: String, required: true },
       phone: { type: String, required: true },
     },
 
-    /* ===== CART ITEMS ===== */
     cartItems: {
       type: [cartItemSchema],
       required: true,
       validate: [(val) => val.length > 0, "Cart cannot be empty"],
     },
 
-    /* ===== PAYMENT ===== */
     amount: { type: Number, required: true, min: 0 },
-    // added "cod" to enum
     payment_gateway: {
       type: String,
       required: true,
@@ -52,7 +44,6 @@ const transactionSchema = new mongoose.Schema(
       default: "PENDING",
     },
 
-    /* ===== DELIVERY ===== */
     deliveryStatus: {
       type: String,
       enum: ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"],
@@ -71,17 +62,23 @@ const transactionSchema = new mongoose.Schema(
       required: true,
     },
 
-    /* ===== STOCK UPDATE FLAG ===== */
-    stockUpdated: { type: Boolean, default: false }, // ensures idempotency
+    stockUpdated: { type: Boolean, default: false },
 
-    /* ===== CANCELLATION INFO ===== */
+    // ── eSewa: fresh UUID per payment attempt to avoid 409 session conflicts ──
+    esewaTransactionUUID: { type: String, default: null },
+
+    // ── Email idempotency flags (were living only in controller, now persisted) ──
+    emailSent: { type: Boolean, default: false },
+    codEmailSent: { type: Boolean, default: false },
+
     cancellation: {
-      reason: { type: String, default: null },       // user's reason for cancellation
-      cancelledAt: { type: Date, default: null },    // timestamp when cancelled
+      reason: { type: String, default: null },
+      cancelledAt: { type: Date, default: null },
     },
   },
-  { timestamps: true } // adds createdAt & updatedAt automatically
+  { timestamps: true }
 );
+
 
 /* ============================= */
 /* ===== EXPORT MODEL ===== */

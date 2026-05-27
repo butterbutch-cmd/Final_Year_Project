@@ -40,7 +40,6 @@ const Success = () => {
       hasVerified.current = true;
       verifyPaymentAndUpdateStatus();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const verifyPaymentAndUpdateStatus = async () => {

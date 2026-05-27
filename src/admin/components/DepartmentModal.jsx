@@ -6,6 +6,7 @@ import {
   updateDepartment,
   deleteDepartment,
 } from "../../services/departmentAPI";
+import toast from "react-hot-toast";
 
 const DepartmentModal = ({
   show,
@@ -51,15 +52,15 @@ const DepartmentModal = ({
 
   const handleDeptSubmit = async () => {
     const { name, description, permissions } = deptForm;
-    if (!name.trim()) return alert("Department name is required");
+    if (!name.trim()) return toast.error("Department name is required");
 
     try {
       if (deptEditMode) {
         await updateDepartment(editingDeptId, { name, description, permissions });
-        alert("Department updated successfully!");
+        toast.success("Department updated successfully!");
       } else {
         const newDept = await createDepartment({ name, description, permissions });
-        alert("Department created successfully!");
+        toast.success ("Department created successfully!");
         if (newDept && newDept._id) {
           setDeptEditMode(true);
           setEditingDeptId(newDept._id);
@@ -69,7 +70,7 @@ const DepartmentModal = ({
       await onRefreshDepartments();
     } catch (err) {
       console.error("Dept save failed:", err);
-      alert(err.message || "Failed to save department");
+      toast.error(err.message || "Failed to save department");
     }
   };
 
@@ -85,7 +86,7 @@ const DepartmentModal = ({
 
     try {
       await deleteDepartment(id);
-      alert("Department deleted successfully");
+      toast.success("Department deleted successfully");
       setDeptForm({ name: "", description: "", permissions: {} });
       setDeptEditMode(false);
       setEditingDeptId(null);
@@ -93,7 +94,7 @@ const DepartmentModal = ({
       await Promise.all([onRefreshDepartments(), onRefreshAdmins()]);
     } catch (err) {
       console.error("Dept delete failed:", err);
-      alert(err.message || "Failed to delete department");
+      toast.error(err.message || "Failed to delete department");
     }
   };
 
@@ -148,11 +149,11 @@ const DepartmentModal = ({
 
     try {
       await axios.post(`/api/modules/${moduleId}/refresh`);
-      alert("Permissions refreshed for all users and departments.");
+      toast.success("Permissions refreshed for all users and departments.");
       await Promise.all([onRefreshDepartments(), onRefreshAdmins(), onRefreshModules()]);
     } catch (err) {
       console.error("Refresh failed:", err);
-      alert(err.message || "Failed to refresh permissions");
+      toast.error(err.message || "Failed to refresh permissions");
     }
   };
 

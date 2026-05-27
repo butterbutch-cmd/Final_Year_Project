@@ -6,6 +6,7 @@ console.log("🔍 Environment check:", {
   hasUrls: !!process.env.SUCCESS_URL && !!process.env.FAILURE_URL,
 });
 
+const { randomUUID } = require("crypto");
 const mongoose = require("mongoose");
 const Transaction = require("../models/paymentModel");
 const Product = require("../models/Product");
@@ -16,6 +17,7 @@ const qs = require("querystring");
 const nodemailer = require("nodemailer");
 const sendNotification = require("../utils/sendNotification");
 
+{/* Email transporter configuration */}
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -24,6 +26,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+{/* SMTP verification */}
 transporter.verify((err) => {
   if (err) console.error("❌ SMTP ERROR:", err);
   else console.log("✅ SMTP READY");
@@ -37,7 +40,7 @@ function getQuantity(item) {
   const qty = Number(item?.quantity || 0);
   return Number.isFinite(qty) ? qty : 0;
 }
-
+///this fucntion
 async function validateCartStock(cartItems = []) {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     throw new Error("Cart is empty");
@@ -93,19 +96,31 @@ async function sendTransactionEmail(transaction, type = "PAID") {
       { new: true }
     );
 
-    if (!guard) return console.log(`✉️ Email (${emailFlag}) already sent or missing.`);
+    if (!guard)
+      return console.log(`✉️ Email (${emailFlag}) already sent or missing.`);
 
     const toEmail =
       (transaction.customerDetails && transaction.customerDetails.email) ||
       transaction.customerEmail ||
       null;
 
-    if (!toEmail) return console.log("✉️ No customer email found, skipping email.");
+    if (!toEmail)
+      return console.log("✉️ No customer email found, skipping email.");
 
     let formattedAddress = "Not provided";
-    if (transaction.deliveryAddress && typeof transaction.deliveryAddress === "object") {
+    if (
+      transaction.deliveryAddress &&
+      typeof transaction.deliveryAddress === "object"
+    ) {
       const addr = transaction.deliveryAddress;
-      formattedAddress = [addr.label, addr.street, addr.city, addr.state, addr.postalCode, addr.country]
+      formattedAddress = [
+        addr.label,
+        addr.street,
+        addr.city,
+        addr.state,
+        addr.postalCode,
+        addr.country,
+      ]
         .filter(Boolean)
         .join("<br>");
     } else if (typeof transaction.deliveryAddress === "string") {
@@ -153,7 +168,9 @@ async function sendTransactionEmail(transaction, type = "PAID") {
     const html = `
       <div style="font-family: Arial, sans-serif; line-height:1.4; color:#222; padding:18px">
         <h2 style="color:#2e7d32; margin-bottom:0.2rem">${
-          type === "COD_PLACED" ? "Order Placed (Cash on Delivery)" : "Thank you for your order!"
+          type === "COD_PLACED"
+            ? "Order Placed (Cash on Delivery)"
+            : "Thank you for your order!"
         }</h2>
         <p style="margin-top:6px">Hi ${transaction.customerDetails?.name || "Customer"},</p>
         <p>${intro}</p>
@@ -203,7 +220,10 @@ async function sendTransactionEmail(transaction, type = "PAID") {
       html,
     });
 
-    console.log(`✉️ Order email (${emailFlag}) sent for transaction:`, transaction._id);
+    console.log(
+      `✉️ Order email (${emailFlag}) sent for transaction:`,
+      transaction._id
+    );
   } catch (err) {
     console.error("❌ Failed to send transaction email:", err);
   }
@@ -239,9 +259,7 @@ async function postPaymentProcessing(transaction) {
       }
 
       if (product.stock < qty) {
-        throw new Error(
-          `Insufficient stock for ${product.name}`
-        );
+        throw new Error(`Insufficient stock for ${product.name}`);
       }
     }
 
@@ -251,70 +269,40 @@ async function postPaymentProcessing(transaction) {
       const qty = getQuantity(item);
 
       const updatedProduct = await Product.findOneAndUpdate(
-        {
-          _id: prodId,
-          stock: { $gte: qty },
-        },
-        {
-          $inc: { stock: -qty },
-        },
-        {
-          new: true,
-        }
+        { _id: prodId, stock: { $gte: qty } },
+        { $inc: { stock: -qty } },
+        { new: true }
       );
 
       if (!updatedProduct) {
-        throw new Error(
-          `Failed updating stock for ${prodId}`
-        );
+        throw new Error(`Failed updating stock for ${prodId}`);
       }
     }
 
     // Mark transaction processed
     await Transaction.updateOne(
       { _id: freshTransaction._id },
-      {
-        $set: {
-          stockUpdated: true,
-          deliveryStatus: "PENDING",
-        },
-      }
+      { $set: { stockUpdated: true, deliveryStatus: "PENDING" } }
     );
 
     const orderData = buildOrderData(freshTransaction);
 
-    const purchasedIds = cartItems
-      .map((i) => i.productId)
-      .filter(Boolean);
+    const purchasedIds = cartItems.map((i) => i.productId).filter(Boolean);
 
     await User.findOneAndUpdate(
       {
         _id: freshTransaction.user,
-        "orders.transactionId": {
-          $ne: freshTransaction._id,
-        },
+        "orders.transactionId": { $ne: freshTransaction._id },
       },
       {
-        $pull: {
-          cart: {
-            product: { $in: purchasedIds },
-          },
-        },
-        $push: {
-          orders: orderData,
-        },
+        $pull: { cart: { product: { $in: purchasedIds } } },
+        $push: { orders: orderData },
       }
     );
 
-    console.log(
-      "✅ postPaymentProcessing completed:",
-      transaction._id
-    );
+    console.log("✅ postPaymentProcessing completed:", transaction._id);
   } catch (err) {
-    console.error(
-      "❌ Post payment processing error:",
-      err
-    );
+    console.error("❌ Post payment processing error:", err);
     throw err;
   }
 }
@@ -348,7 +336,11 @@ const initiatePayment = async (req, res) => {
 
     const transaction = await Transaction.create({
       user: req.user._id,
-      customerDetails: { name: customerName, email: customerEmail, phone: customerPhone },
+      customerDetails: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+      },
       cartItems,
       amount: safeAmount,
       payment_gateway: paymentGateway,
@@ -360,12 +352,23 @@ const initiatePayment = async (req, res) => {
 
     console.log("✅ Transaction created:", transaction._id.toString());
 
+    // ── eSewa ──────────────────────────────────────────────────────────────
     if (paymentGateway === "esewa") {
+      // Generate a fresh UUID on every attempt so eSewa never sees a
+      // duplicate transaction_uuid — this prevents the 409 Conflict that
+      // occurs when a previous session with the same UUID is still alive
+      // on eSewa's server.
+      const esewaUUID = randomUUID();
+
+      // Persist it so the success callback can find the right transaction
+      transaction.esewaTransactionUUID = esewaUUID;
+      await transaction.save();
+
       const paymentData = {
         amount: safeAmount.toString(),
         tax_amount: "0",
         total_amount: safeAmount.toString(),
-        transaction_uuid: transaction._id.toString(),
+        transaction_uuid: esewaUUID,           // ← fresh UUID, NOT _id
         product_code: process.env.ESEWA_MERCHANT_ID,
         product_service_charge: "0",
         product_delivery_charge: "0",
@@ -374,59 +377,66 @@ const initiatePayment = async (req, res) => {
         signed_field_names: "total_amount,transaction_uuid,product_code",
       };
 
-      const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${paymentData.transaction_uuid},product_code=${paymentData.product_code}`;
-      paymentData.signature = generateHmacSha256Hash(dataToSign, process.env.ESEWA_SECRET);
+      const dataToSign = `total_amount=${paymentData.total_amount},transaction_uuid=${esewaUUID},product_code=${paymentData.product_code}`;
+      paymentData.signature = generateHmacSha256Hash(
+        dataToSign,
+        process.env.ESEWA_SECRET
+      );
 
       console.log("━━━━━━━━━━━━ eSewa DEBUG ━━━━━━━━━━━━");
+      console.log("esewaUUID    :", esewaUUID);
       console.log("dataToSign   :", dataToSign);
       console.log("signature    :", paymentData.signature);
-      console.log("secret       :", JSON.stringify(process.env.ESEWA_SECRET));
       console.log("success_url  :", paymentData.success_url);
       console.log("failure_url  :", paymentData.failure_url);
       console.log("total_amount :", paymentData.total_amount);
-      console.log("full payload :", paymentData);
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-      const payment = await axios.post(process.env.ESEWA_PAYMENT_URL, qs.stringify(paymentData), {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        maxRedirects: 0,
-        validateStatus: (status) => status >= 200 && status < 400,
+      // Return params to frontend — browser will POST directly to eSewa
+      return res.json({
+        transactionId: transaction._id,   // stored in sessionStorage on frontend
+        esewaUrl: process.env.ESEWA_PAYMENT_URL,
+        esewaParams: paymentData,
       });
-
-      console.log("━━━━━━━━━━━━ eSewa RESPONSE ━━━━━━━━━━━━");
-      console.log("response status :", payment.status);
-      console.log("redirect URL    :", payment.headers?.location);
-      console.log("response data   :", payment.data);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-      const paymentUrl = payment.headers?.location;
-      if (!paymentUrl) throw new Error("Payment URL missing from eSewa response");
-
-      return res.json({ url: paymentUrl, transactionId: transaction._id });
     }
 
+    // ── Khalti ─────────────────────────────────────────────────────────────
     if (paymentGateway === "khalti") {
       const khaltiPayload = {
         return_url: process.env.SUCCESS_URL,
         website_url: "http://localhost:5173",
         amount: safeAmount * 100,
         purchase_order_id: transaction._id.toString(),
-        purchase_order_name: cartItems.map((i) => i.name).join(", ").substring(0, 100),
-        customer_info: { name: customerName, email: customerEmail, phone: customerPhone },
+        purchase_order_name: cartItems
+          .map((i) => i.name)
+          .join(", ")
+          .substring(0, 100),
+        customer_info: {
+          name: customerName,
+          email: customerEmail,
+          phone: customerPhone,
+        },
       };
 
-      const payment = await axios.post(process.env.KHALTI_PAYMENT_URL, khaltiPayload, {
-        headers: {
-          Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const payment = await axios.post(
+        process.env.KHALTI_PAYMENT_URL,
+        khaltiPayload,
+        {
+          headers: {
+            Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!payment.data?.payment_url) {
         throw new Error("Payment URL missing from Khalti");
       }
 
-      return res.json({ url: payment.data.payment_url, transactionId: transaction._id });
+      return res.json({
+        url: payment.data.payment_url,
+        transactionId: transaction._id,
+      });
     }
 
     return res.status(400).json({ message: "Invalid payment gateway" });
@@ -444,8 +454,14 @@ const initiatePayment = async (req, res) => {
 // ─────────────────────────────────────────────
 const initiateCashOnDeliveryPayment = async (req, res) => {
   try {
-    const { amount, cartItems, customerName, customerEmail, customerPhone, deliveryAddress } =
-      req.body;
+    const {
+      amount,
+      cartItems,
+      customerName,
+      customerEmail,
+      customerPhone,
+      deliveryAddress,
+    } = req.body;
 
     if (!cartItems || !deliveryAddress) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -461,7 +477,11 @@ const initiateCashOnDeliveryPayment = async (req, res) => {
 
     const transaction = await Transaction.create({
       user: req.user._id,
-      customerDetails: { name: customerName, email: customerEmail, phone: customerPhone },
+      customerDetails: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+      },
       cartItems,
       amount: safeAmount,
       payment_gateway: "cod",
@@ -475,7 +495,10 @@ const initiateCashOnDeliveryPayment = async (req, res) => {
 
     await postPaymentProcessing(transaction);
 
-    console.log("✅ COD order saved and stock deducted for:", transaction._id.toString());
+    console.log(
+      "✅ COD order saved and stock deducted for:",
+      transaction._id.toString()
+    );
 
     try {
       await sendNotification({
@@ -524,7 +547,9 @@ const markCodPaid = async (req, res) => {
     }
 
     if (transaction.payment_gateway !== "cod") {
-      return res.status(400).json({ message: "Not a Cash-on-Delivery transaction" });
+      return res
+        .status(400)
+        .json({ message: "Not a Cash-on-Delivery transaction" });
     }
 
     if (transaction.status !== "COMPLETED") {
@@ -533,7 +558,10 @@ const markCodPaid = async (req, res) => {
       await transaction.save();
     }
 
-    console.log("✅ COD marked as paid (or already paid):", transaction._id.toString());
+    console.log(
+      "✅ COD marked as paid (or already paid):",
+      transaction._id.toString()
+    );
 
     try {
       await postPaymentProcessing(transaction);
@@ -580,6 +608,7 @@ const paymentStatus = async (req, res) => {
   }
 
   try {
+    // transactionId from sessionStorage is always the MongoDB _id
     const transaction = await Transaction.findById(transactionId);
     if (!transaction) {
       return res.status(400).json({ message: "Transaction not found" });
@@ -604,17 +633,25 @@ const paymentStatus = async (req, res) => {
 
       return res.json({ status: "FAILED" });
     }
-    // ────────────────────────────────────────────────────────
 
+    // ── eSewa ────────────────────────────────────────────────
     if (transaction.payment_gateway === "esewa") {
+      // Use the stored esewaTransactionUUID for the status check —
+      // this must match what was sent to eSewa during initiation
+      const uuidForCheck =
+        transaction.esewaTransactionUUID || transaction._id.toString();
+
       try {
-        const response = await axios.get(process.env.ESEWA_PAYMENT_STATUS_CHECK_URL, {
-          params: {
-            product_code: process.env.ESEWA_MERCHANT_ID,
-            total_amount: transaction.amount,
-            transaction_uuid: transaction._id.toString(),
-          },
-        });
+        const response = await axios.get(
+          process.env.ESEWA_PAYMENT_STATUS_CHECK_URL,
+          {
+            params: {
+              product_code: process.env.ESEWA_MERCHANT_ID,
+              total_amount: transaction.amount,
+              transaction_uuid: uuidForCheck,   // ← use stored UUID
+            },
+          }
+        );
 
         console.log("🔍 eSewa status check response:", response.data);
 
@@ -645,9 +682,12 @@ const paymentStatus = async (req, res) => {
       }
     }
 
+    // ── Khalti ───────────────────────────────────────────────
     if (transaction.payment_gateway === "khalti") {
       if (!pidx) {
-        return res.status(400).json({ message: "pidx is required for Khalti" });
+        return res
+          .status(400)
+          .json({ message: "pidx is required for Khalti" });
       }
 
       try {

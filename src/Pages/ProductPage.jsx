@@ -13,10 +13,13 @@ import QuantityStepper from "../Components/ProductDetailPageComponent/QuantitySt
 import PurchaseActions from "../Components/ProductDetailPageComponent/PurchaseActions";
 import Accordion from "../Components/ProductDetailPageComponent/Accordion";
 import ProductReviews from "../Components/ProductDetailPageComponent/ProductReviews";
+import toast from "react-hot-toast";
 
 const serif = { fontFamily: "'Cormorant Garamond', serif" };
 const sans  = { fontFamily: "'DM Sans', sans-serif" };
 
+
+// Fetch user's wishlist (for heart icon state)
 const getUserWishlist = async () => {
   const token = localStorage.getItem("token");
   if (!token) return [];
@@ -86,11 +89,11 @@ const ProductPage = () => {
   const handleAddToCart = async () => {
     if (isOutOfStock) return;
     if (quantity > product.stock) {
-      alert(`Only ${product.stock} items available in stock.`);
+      toast.error(`Only ${product.stock} items available in stock.`);
       return;
     }
     const token = localStorage.getItem("token");
-    if (!token) { alert("Please login first"); return; }
+    if (!token) { toast.error("Please login first"); return; }
     try {
       const res = await fetch("http://localhost:5000/api/user/cart", {
         method: "POST",
@@ -106,7 +109,7 @@ const ProductPage = () => {
       navigate("/checkout");
     } catch (err) {
       console.error("Add to cart error:", err);
-      alert("Failed to add item to cart");
+      toast.error("Failed to add item to cart");
     }
   };
 
@@ -114,7 +117,7 @@ const ProductPage = () => {
   const handleToggleWishlist = async (productId) => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return alert("Login first!");
+      if (!token) return toast.error("Login first!");
       const res = await fetch(`http://localhost:5000/api/user/wishlist/${productId}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

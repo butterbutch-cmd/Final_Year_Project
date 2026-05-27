@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function PurchaseActions({ product = {}, wishlist = [], totalPrice = 0, onAddToCart = () => {}, onToggleWishlist = () => {} }) {
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -12,12 +13,12 @@ export default function PurchaseActions({ product = {}, wishlist = [], totalPric
   }, [wishlist, product]);
 
   const handleWishlistClick = async () => {
-    if (!product._id) return alert("Product ID missing!");
+    if (!product._id) return toast.error("Product ID missing!");
     try {
       await onToggleWishlist(product._id);
     } catch (err) {
       console.error("Error toggling wishlist:", err);
-      alert("Failed to update wishlist");
+      toast.error("Failed to update wishlist");
     }
   };
 

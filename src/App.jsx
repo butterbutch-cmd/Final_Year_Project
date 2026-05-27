@@ -22,9 +22,11 @@ import PaymentForm from "./Payment/Components/PaymentForm";
 import Success from "./Payment/Components/Success";       
 import Failure from "./Payment/Components/Failure";       
 import ForumPage from "./Pages/ForumPage";
+import SearchPage from "./Pages/SearchPage";
 import ThreadPage from "./Pages/ThreadPage";
 import Chatbot from "./components/Chatbot"; 
 import NotificationPage from "./Pages/NotificationPage";
+import VerifyEmail from "./Authentication/VerifyEmail";
 import "./App.css";
 
 export default function App() {
@@ -49,7 +51,9 @@ export default function App() {
             <Route path="/testmail" element={<TestMail />} />
             <Route path="/product/:id" element={<ProductPage />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/contacts" element={<Contacts />} />
+            <Route path="/search" element={<SearchPage />} />
             {/* ✅ Forum Routes */}
             <Route path="/forum" element={<ForumPage />} />
             <Route path="/forum/:threadId" element={<ThreadPage />} />

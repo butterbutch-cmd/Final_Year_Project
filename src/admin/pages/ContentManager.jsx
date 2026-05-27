@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MessageSquare, Flag, Eye, X, Star, User, Package, AlertTriangle } from "lucide-react";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
+import toast from "react-hot-toast";
 
 import {
   getReportedReviews,
@@ -145,7 +146,7 @@ export default function ContentManager() {
       }
     } catch (error) {
       console.error(error.message);
-      alert("Failed to delete review");
+      toast.error("Failed to delete review");
     } finally {
       setDetailLoading(false);
     }

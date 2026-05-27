@@ -12,15 +12,10 @@ import {
 } from "lucide-react";
 import Header from "/FYP/Final_Year_Project/src/Components/Header/Header";
 import esewaLogo from "/FYP/Final_Year_Project/src/assets/esewa.png";
+import toast from "react-hot-toast";
 
 const serif = { fontFamily: "'Cormorant Garamond', serif" };
 const sans = { fontFamily: "'DM Sans', sans-serif" };
-
-// const PAYMENT_OPTIONS = [
-//   { value: "esewa", label: "eSewa", icon: "💚" },
-//   { value: "khalti", label: "Khalti", icon: "💜" },
-//   { value: "cod", label: "Cash on Delivery", icon: "💵" },
-// ];
 
 const PAYMENT_OPTIONS = [
   {
@@ -36,7 +31,6 @@ const PAYMENT_OPTIONS = [
   },
   { value: "cod", label: "Cash on Delivery", icon: "💵" },
 ];
-
 
 const Field = ({ label, children }) => (
   <div className="flex flex-col gap-1.5">
@@ -76,7 +70,8 @@ const PaymentComponent = () => {
   const TAX_RATE = 0.13;
   const BASE_SHIPPING_COST = 100;
   const FREE_SHIPPING_THRESHOLD = 3000;
- {/* Fetch cart items on component mount */}
+
+  // Fetch cart items on component mount
   useEffect(() => {
     const fetchCart = async () => {
       try {
@@ -95,7 +90,7 @@ const PaymentComponent = () => {
     fetchCart();
   }, []);
 
-  {/** Fetch user addresses on component mount */}
+  // Fetch user addresses on component mount
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
@@ -127,7 +122,7 @@ const PaymentComponent = () => {
     subtotal > FREE_SHIPPING_THRESHOLD ? 0 : BASE_SHIPPING_COST;
   const totalAmount = subtotal + taxAmount + shippingCost;
 
-  const handleField = (key) => (e) =>
+  const handleField = (key) => (e) => //////
     setFormData((prev) => ({ ...prev, [key]: e.target.value }));
 
   const updateQuantity = async (productId, action) => {
@@ -144,7 +139,7 @@ const PaymentComponent = () => {
 
       if (action === "increase" && currentStock !== null) {
         if (targetItem.quantity + 1 > currentStock) {
-          alert(`Only ${currentStock} items available in stock.`);
+          toast.error(`Only ${currentStock} items available in stock.`);
           return;
         }
       }
@@ -179,8 +174,8 @@ const PaymentComponent = () => {
 
   const removeItem = async (productId) => {
     try {
-      const prevItems = [...cartItems];
-      setCartItems((prev) =>
+      const prevItems = [...cartItems];/// this is a spread
+      setCartItems((prev) =>///
         prev.filter((item) => item.product?._id !== productId)
       );
 
@@ -207,6 +202,7 @@ const PaymentComponent = () => {
   const checkStockBeforeSubmit = async () => {
     const token = localStorage.getItem("token");
 
+    {/*Loops the cart items */}
     for (const item of cartItems) {
       const productId = item.product?._id;
       if (!productId) throw new Error("Invalid cart item: missing product ID");
@@ -237,7 +233,7 @@ const PaymentComponent = () => {
         throw new Error(`Stock data unavailable for ${latestName}`);
 
       if (item.quantity > latestStock) {
-        alert(`Only ${latestStock} items available for ${latestName}.`);
+        toast.error(`Only ${latestStock} items available for ${latestName}.`);
         return false;
       }
     }
@@ -245,16 +241,34 @@ const PaymentComponent = () => {
     return true;
   };
 
+
+  const submitEsewaForm = (esewaUrl, esewaParams) => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = esewaUrl;
+
+    Object.entries(esewaParams).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit(); 
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!selectedAddress) {
-      alert("Please select a delivery address first");
+      toast.error("Please select a delivery address first");
       return;
     }
 
     if (!cartItems.length) {
-      alert("Your cart is empty");
+      toast.error("Your cart is empty");
       return;
     }
 
@@ -266,8 +280,8 @@ const PaymentComponent = () => {
       const stockOk = await checkStockBeforeSubmit();
       if (!stockOk) return;
 
-      const payload = {
-        ...formData,
+      const payload = { ///payload that we will send to the backend 
+        ...formData, //spread operator to include customerName, customerEmail, customerPhone, paymentGateway
         cartItems: cartItems.map((item) => ({
           productId: item.product?._id,
           name: item.product?.name || "Unknown",
@@ -281,6 +295,7 @@ const PaymentComponent = () => {
         deliveryAddress: selectedAddress,
       };
 
+      // ── COD ──────────────────────────────────────────────────────────────
       if (formData.paymentGateway === "cod") {
         const res = await axios.post(
           "http://localhost:5000/api/payment/initiate-cash-on-delivery-payment",
@@ -293,6 +308,7 @@ const PaymentComponent = () => {
             "current_transaction_id",
             res.data.transactionId
           );
+          toast.success("Cash on Delivery order initiated successfully!");  
           setCodTransactionId(res.data.transactionId);
           setCodResult("success");
         } else {
@@ -304,22 +320,38 @@ const PaymentComponent = () => {
         return;
       }
 
-      // eSewa / Khalti
+      // ── eSewa / Khalti ────────────────────────────────────────────────────
       const res = await axios.post(
         "http://localhost:5000/api/payment/initiate-payment",
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // eSewa: backend returns signed params → browser submits form directly
+      if (
+        formData.paymentGateway === "esewa" &&
+        res.data?.esewaUrl &&
+        res.data?.esewaParams
+      ) {
+        sessionStorage.setItem( ///storing the transaction id on session storage
+          "current_transaction_id",
+          res.data.transactionId
+        );
+        submitEsewaForm(res.data.esewaUrl, res.data.esewaParams); ///submitting the form to esewa
+        return;
+      }
+
+      // Khalti: backend returns a payment_url → redirect as before
       if (res.data?.url && res.data?.transactionId) {
         sessionStorage.setItem(
           "current_transaction_id",
           res.data.transactionId
         );
         window.location.href = res.data.url;
-      } else {
-        alert("Payment URL missing");
+        return;
       }
+
+      toast.error("Payment URL missing");
     } catch (err) {
       console.error("Payment error:", err.response?.data || err);
       if (formData.paymentGateway === "cod") {
@@ -328,7 +360,7 @@ const PaymentComponent = () => {
         );
         setCodResult("failed");
       } else {
-        alert(err.response?.data?.message || err.message || "Payment failed");
+        toast.error(err.response?.data?.message || err.message || "Payment failed");
       }
     } finally {
       setIsSubmitting(false);
@@ -418,10 +450,7 @@ const PaymentComponent = () => {
               </button>
             </div>
 
-            <p
-              className="text-[11px] text-[#8c8880] font-light"
-              style={sans}
-            >
+            <p className="text-[11px] text-[#8c8880] font-light" style={sans}>
               A confirmation email has been sent to{" "}
               <span className="text-[#2d4a2d]">{formData.customerEmail}</span>
             </p>
@@ -515,7 +544,7 @@ const PaymentComponent = () => {
   return (
     <div className="min-h-screen bg-[#fdfcf8]">
       <Header />
-
+      {/* ── Page Header ── */}
       <div className="border-b border-[#2d4a2d]/10 px-6 lg:px-14 py-10">
         <p
           className="text-[11px] tracking-[0.2em] uppercase text-[#7a9e7e] m-0 mb-2"
@@ -560,10 +589,7 @@ const PaymentComponent = () => {
             </div>
 
             {loadingAddress ? (
-              <p
-                className="text-[13px] text-[#8c8880] font-light"
-                style={sans}
-              >
+              <p className="text-[13px] text-[#8c8880] font-light" style={sans}>
                 Loading addresses…
               </p>
             ) : userAddresses.length === 0 ? (
@@ -597,9 +623,7 @@ const PaymentComponent = () => {
                     >
                       <div
                         className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          selected
-                            ? "border-[#2d4a2d]"
-                            : "border-[#8c8880]/50"
+                          selected ? "border-[#2d4a2d]" : "border-[#8c8880]/50"
                         }`}
                       >
                         {selected && (
@@ -868,15 +892,11 @@ const PaymentComponent = () => {
                 { label: "Tax (13%)", value: `Rs. ${taxAmount.toFixed(2)}` },
                 {
                   label: "Shipping",
-                  value:
-                    shippingCost === 0 ? "Free" : `Rs. ${shippingCost}`,
+                  value: shippingCost === 0 ? "Free" : `Rs. ${shippingCost}`,
                   highlight: shippingCost === 0,
                 },
               ].map(({ label, value, highlight }) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between"
-                >
+                <div key={label} className="flex items-center justify-between">
                   <span
                     className="text-[12.5px] font-light text-[#8c8880]"
                     style={sans}

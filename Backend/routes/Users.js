@@ -5,41 +5,192 @@ const { User, validateUserSignup } = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const authenticate = require("../middleware/authenticate");
 const checkPermission = require("../middleware/checkPermission");
+const sendVerificationEmail = require("../utils/sendVerificationEmail");
 
 const router = express.Router();
 
 // -----------------------
 // PUBLIC USER SIGNUP
 // -----------------------
+// router.post("/signup", async (req, res) => {
+//   try {
+//     // Validate input (username, email, password) using Joi
+//     const { error } = validateUserSignup(req.body);
+//     if (error)
+//       return res.status(400).json({ message: error.details[0].message });
+
+//     // Check if email and user already exists
+//     const existingUser = await User.findOne({ $or: [{ email: req.body.email },{ username: req.body.username }]});
+
+//     if (existingUser) { return res.status(409).json({message: "Username or Email already exists"});}
+
+//     // Hash password
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+//     // Save user
+//     const newUser = new User({
+//       username: req.body.username,
+//       email: req.body.email,
+//       password: hashedPassword,
+//       authProvider: "local",
+//     });
+
+//     await newUser.save();
+
+//     res.status(201).json({ message: "User created successfully" });
+//   } catch (err) {
+//     console.error("User signup error:", err);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// });
+
 router.post("/signup", async (req, res) => {
   try {
-    // Validate input (username, email, password)
     const { error } = validateUserSignup(req.body);
-    if (error)
+    if (error) {
       return res.status(400).json({ message: error.details[0].message });
+    }
 
-    // Check if email already exists
-    const existingUser = await User.findOne({ email: req.body.email });
-    if (existingUser)
-      return res.status(409).json({ message: "Email already exists" });
+    const existingUser = await User.findOne({
+      $or: [{ email: req.body.email }, { username: req.body.username }],
+    });
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
+    // ── Already exists but verified → hard block ──────────────────
+    if (existingUser && existingUser.isEmailVerified) {
+      return res.status(409).json({ message: "Username or Email already exists" });
+    }
+
+    // ── Already exists but NOT verified → resend OTP ──────────────
+    if (existingUser && !existingUser.isEmailVerified) {
+      const otp       = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await bcrypt.hash(otp, 10);
+
+      existingUser.emailVerificationOtp       = hashedOtp;
+      existingUser.emailVerificationOtpExpire = Date.now() + 10 * 60 * 1000;
+
+      await existingUser.save();
+
+      try {
+        await sendVerificationEmail(existingUser.email, otp, existingUser.username);
+      } catch (mailErr) {
+        console.error("Mail error (resend):", mailErr);
+        return res.status(500).json({ message: "Failed to send verification email. Check mail config." });
+      }
+
+      return res.status(200).json({
+        message: "A new verification code has been sent to your email.",
+        email: existingUser.email,
+      });
+    }
+
+    // ── Brand new user ─────────────────────────────────────────────
+    const salt           = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-    // Save user
+    const otp       = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
     const newUser = new User({
-      username: req.body.username,
-      email: req.body.email,
-      password: hashedPassword,
-      authProvider: "local",
+      username:                   req.body.username,
+      email:                      req.body.email,
+      password:                   hashedPassword,
+      authProvider:               "local",
+      isEmailVerified:            false,
+      emailVerificationOtp:       hashedOtp,
+      emailVerificationOtpExpire: Date.now() + 10 * 60 * 1000,
     });
 
     await newUser.save();
 
-    res.status(201).json({ message: "User created successfully" });
+    // ── Isolate mail errors from save errors ───────────────────────
+    try {
+      await sendVerificationEmail(newUser.email, otp, newUser.username);
+    } catch (mailErr) {
+      console.error("Mail error (new user):", mailErr);
+      // User is saved — don't 500, just warn. They can use resend-otp.
+      return res.status(201).json({
+        message: "Account created but we couldn't send the verification email. Use 'Resend code'.",
+        email: newUser.email,
+      });
+    }
+
+    res.status(201).json({
+      message: "Account created. Please verify your email with the 6-digit code.",
+      email: newUser.email,
+    });
+
   } catch (err) {
-    console.error("User signup error:", err);
+    console.error("Signup error:", err); // ← read this line in your terminal
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// POST /api/Users/verify-email
+router.post("/verify-email", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required." });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ message: "Email is already verified." });
+    }
+
+    // Check expiry
+    if (!user.emailVerificationOtpExpire || user.emailVerificationOtpExpire < Date.now()) {
+      return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    }
+
+    // Compare OTP
+    const isMatch = await bcrypt.compare(otp, user.emailVerificationOtp);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid OTP. Please try again." });
+    }
+
+    // Mark verified and clear OTP fields
+    user.isEmailVerified = true;
+    user.emailVerificationOtp = null;
+    user.emailVerificationOtpExpire = null;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully. You can now log in." });
+  } catch (err) {
+    console.error("Verify email error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// POST /api/Users/resend-otp
+router.post("/resend-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found." });
+    if (user.isEmailVerified) return res.status(400).json({ message: "Already verified." });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    user.emailVerificationOtp = hashedOtp;
+    user.emailVerificationOtpExpire = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    await sendVerificationEmail(user.email, otp, user.username);
+
+    res.status(200).json({ message: "A new OTP has been sent to your email." });
+  } catch (err) {
+    console.error("Resend OTP error:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
